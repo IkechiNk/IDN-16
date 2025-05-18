@@ -1,5 +1,10 @@
-#include "stdint.h"
-#include "stdbool.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
 // Memory region sizes
 #define MEMORY_SIZE 65536 // 64KB
 #define ROM_SIZE 8192 // 8KB
@@ -53,10 +58,17 @@ typedef struct {
     const char* name; // Debugging purposes
 } MemoryRegion;
 
-void memory_init(void);
+/* Initializes memory with default values of 0, */
+void memory_init(void); 
+/* Reads a byte from memory.*/
 uint8_t memory_read_byte(uint16_t address);
+/* Reads a word from memory.*/
 uint16_t memory_read_word(uint16_t address);
+/* Writes given byte to memory address. Returns success of operation. */
 bool memory_write_byte(uint16_t address, uint8_t data);
+/* Writes given word to memory address. Returns success of operation. */
 bool memory_write_word(uint16_t address, uint16_t data);
+/* Returns the region type of the given address. */ 
 MemoryRegionType memory_get_region(uint16_t address);
+/* Dumps words stored in memory from address start to stdout.*/
 void memory_dump(uint16_t start, uint16_t length);
