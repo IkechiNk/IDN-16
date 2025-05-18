@@ -141,19 +141,21 @@ uint8_t handle_sound_read(uint16_t offset) {
 }
 
 
-void handle_input_write(uint16_t offset, uint8_t value) {
+bool handle_input_write(uint16_t offset, uint8_t value) {
     switch (offset) {
         case 0x00: 
         case 0x01:
             printf("Write to read-only register: %04X\n", offset);
+            return false; 
             break;
         default:    
-            printf("Write to input register: %04X = %02X\n", offset, value); 
+            printf("Write to input register (nothing actually written): %04X = %02X\n", offset, value);
+            return true; 
             break;       
     }
 }
 
-void handle_sound_write(uint16_t offset, uint8_t value) {
+bool handle_sound_write(uint16_t offset, uint8_t value) {
     uint8_t channel = offset / 16;
     uint8_t reg = offset % 16;
     
@@ -163,15 +165,18 @@ void handle_sound_write(uint16_t offset, uint8_t value) {
             sound_system.channels[channel].frequency = 
                 (sound_system.channels[channel].frequency & 0xFF00) | value;
             // Call function to update sound frequency
+            return true;
             break;
         case 0x1:
             sound_system.channels[channel].frequency = 
                 (sound_system.channels[channel].frequency & 0x00FF) | (value << 8);
             // Call function to update sound frequency
+            return true;
             break;
         case 0x2:
             sound_system.channels[channel].volume = value;
             // Call function to update sound volume
+            return true;
             break;
         default:
             printf("Write to sound channel %04X:%04X = %02X\n", channel, reg, value);
@@ -183,14 +188,14 @@ uint8_t memory_read_byte(uint16_t address) {
     if (address < MEMORY_SIZE) {
         MemoryRegionType region_type = memory_get_region(address);
         MemoryRegion* region = &memory_regions[region_type];
-        if (region->memory_mapped_io) {
+        if (region->memory_mapped_io && region_type != REGION_COUNT) {
             switch (region_type)
             {
             case REGION_INPUT:
-                // Handle input register
+                handle_input_read(address - INPUT_REG_START);
                 break;
             case REGION_SOUND:
-                // Handle sound registers
+                handle_sound_read(address - SOUND_REG_START);
                 break;
             }
         }
@@ -207,21 +212,20 @@ uint16_t memory_read_word(uint16_t address) {
     if (address < MEMORY_SIZE) {
         MemoryRegionType region_type = memory_get_region(address);
         MemoryRegion* region = &memory_regions[region_type];
-        if (region->memory_mapped_io) {
+        if (region->memory_mapped_io && region_type != REGION_COUNT) {
             switch (region_type)
             {
             case REGION_INPUT:
-                // Handle input register
+                handle_input_read(address - INPUT_REG_START);
                 break;
             case REGION_SOUND:
-                // Handle sound registers
+                handle_sound_read(address - SOUND_REG_START);
                 break;
             }
         }
         else {
             return memory[address] & 0xFF;
         }
-        return memory[address];
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
         return 0;
@@ -231,12 +235,27 @@ uint16_t memory_read_word(uint16_t address) {
 bool memory_write_byte(uint16_t address, uint8_t data) {
     if (address < MEMORY_SIZE) {
         MemoryRegionType region_type = memory_get_region(address);
-        if (memory_regions[region_type].read_only == false) {
-            memory[address] = (memory[address] & 11110000) ^ data;
-            return true;
-        } else {
+        MemoryRegion* region = &memory_regions[region_type];
+        if (region->read_only) {
             fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
             return false;
+        }
+        if (region->memory_mapped_io && region_type != REGION_COUNT) {
+            bool success = false;
+            switch (region_type)
+            {
+            case REGION_INPUT:
+                success = handle_input_write(address - INPUT_REG_START, data);
+                break;
+            case REGION_SOUND:
+                success = handle_sound_write(address - SOUND_REG_START, data);
+                break;
+            }
+            return success;
+        }
+        else {
+            memory[address] = (memory[address] & 0xFF00) | data;
+            return true;
         }
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
@@ -246,13 +265,28 @@ bool memory_write_byte(uint16_t address, uint8_t data) {
 
 bool memory_write_word(uint16_t address, uint16_t data) {
     if (address < MEMORY_SIZE) {
-        MemoryRegionType region = memory_get_region(address);
-        if (memory_regions[region].read_only == false) {
-            memory[address] = data;
-            return true;
-        } else {
+        MemoryRegionType region_type = memory_get_region(address);
+        MemoryRegion* region = &memory_regions[region_type];
+        if (region->read_only) {
             fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
             return false;
+        }
+        if (region->memory_mapped_io && region_type != REGION_COUNT) {
+            bool success = false;
+            switch (region_type)
+            {
+            case REGION_INPUT:
+                success = handle_input_write(address - INPUT_REG_START, data);
+                break;
+            case REGION_SOUND:
+                success = handle_sound_write(address - SOUND_REG_START, data);
+                break;
+            }
+            return success;
+        }
+        else {
+            memory[address] = data;
+            return true;
         }
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
