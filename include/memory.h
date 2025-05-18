@@ -1,3 +1,5 @@
+#include "stdint.h"
+#include "stdbool.h"
 // Memory region sizes
 #define MEMORY_SIZE 65536 // 64KB
 #define ROM_SIZE 8192 // 8KB
@@ -30,3 +32,31 @@
 #define SYSTEM_ROM_START 0x5400
 #define SYSTEM_ROM_END 0x63FF
 
+// Memory Region Type
+typedef enum {
+    REGION_ROM,
+    REGION_RAM,
+    REGION_VIDEO,
+    REGION_SPRITE,
+    REGION_PALETTE,
+    REGION_SOUND,
+    REGION_INPUT,
+    REGION_SYSTEM,
+    REGION_COUNT // Enum defines automatically
+} MemoryRegionType;
+
+typedef struct {
+    uint16_t start_address;
+    uint16_t end_address;
+    bool read_only;
+    bool memory_mapped_io;
+    const char* name; // Debugging purposes
+} MemoryRegion;
+
+void memory_init(void);
+uint8_t memory_read_byte(uint16_t address);
+uint16_t memory_read_word(uint16_t address);
+bool memory_write_byte(uint16_t address, uint8_t data);
+bool memory_write_word(uint16_t address, uint16_t data);
+MemoryRegionType memory_get_region(uint16_t address);
+void memory_dump(uint16_t start, uint16_t length);
