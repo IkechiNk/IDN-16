@@ -1,7 +1,8 @@
 #include "include/memory.h"
-
+#include <SDL2/SDL.h>
 // Memory array
 uint16_t memory[MEMORY_SIZE];
+SoundSystem sound_system;
 
 // Memory regions
 static const MemoryRegion memory_regions[REGION_COUNT] = {
@@ -65,9 +66,137 @@ void memory_init(void) {
     load_startup();
 }
 
+uint8_t get_controller1_button_state() {
+    uint8_t button_state = 0;
+    
+    // Check real keyboard/gamepad and set bits accordingly
+    if (is_key_pressed(SDL_SCANCODE_F))        button_state |= 0x01; // A button
+    if (is_key_pressed(SDL_SCANCODE_G))        button_state |= 0x02; // B button
+    if (is_key_pressed(SDL_SCANCODE_TAB))   button_state |= 0x04; // Start
+    if (is_key_pressed(SDL_SCANCODE_LSHIFT))    button_state |= 0x08; // Select
+    if (is_key_pressed(SDL_SCANCODE_W))       button_state |= 0x10; // Up
+    if (is_key_pressed(SDL_SCANCODE_S))     button_state |= 0x20; // Down
+    if (is_key_pressed(SDL_SCANCODE_A))     button_state |= 0x40; // Left
+    if (is_key_pressed(SDL_SCANCODE_D))    button_state |= 0x80; // Right
+    
+    return button_state;
+}
+
+uint8_t get_controller2_button_state() {
+    uint8_t button_state = 0;
+    
+    // Check real keyboard/gamepad and set bits accordingly
+    if (is_key_pressed(SDL_SCANCODE_J))        button_state |= 0x01; // A button
+    if (is_key_pressed(SDL_SCANCODE_K))        button_state |= 0x02; // B button
+    if (is_key_pressed(SDL_SCANCODE_RETURN))   button_state |= 0x04; // Start
+    if (is_key_pressed(SDL_SCANCODE_RSHIFT))    button_state |= 0x08; // Select
+    if (is_key_pressed(SDL_SCANCODE_UP))       button_state |= 0x10; // Up
+    if (is_key_pressed(SDL_SCANCODE_DOWN))     button_state |= 0x20; // Down
+    if (is_key_pressed(SDL_SCANCODE_LEFT))     button_state |= 0x40; // Left
+    if (is_key_pressed(SDL_SCANCODE_RIGHT))    button_state |= 0x80; // Right
+    
+    return button_state;
+}
+
+
+uint16_t handle_input_read(uint16_t offset) {
+    switch (offset) {
+        case 0x00: // Controller 1 state
+            return get_controller1_button_state;
+            break;
+        case 0x01: // Controller 2 state
+            return get_controller2_button_state;
+            break;
+        default:
+            return 0x00; // Invalid offset
+            break;
+    }
+}
+
+uint8_t handle_sound_read(uint16_t offset) {
+    uint8_t channel = offset / 16;
+    uint8_t reg = offset % 16;
+
+    if (channel >= 4) {
+        fprintf(stderr, "Error: Invalid sound channel %d\n", channel);
+        return 0;
+    }
+    
+    // Map the memory address to the sound system
+    switch (reg) {
+        case 0x0: 
+            return sound_system.channels[channel].frequency & 0xFF;
+            break;
+        case 0x1: 
+            return (sound_system.channels[channel].frequency >> 8) & 0xFF;
+            break;
+        case 0x2: 
+            return sound_system.channels[channel].volume;
+            break;
+        default:
+            printf("Read from sound channel %04X:%04X\n", channel, reg);
+            break;
+    }
+    return 0;
+}
+
+
+void handle_input_write(uint16_t offset, uint8_t value) {
+    switch (offset) {
+        case 0x00: 
+        case 0x01:
+            printf("Write to read-only register: %04X\n", offset);
+            break;
+        default:    
+            printf("Write to input register: %04X = %02X\n", offset, value); 
+            break;       
+    }
+}
+
+void handle_sound_write(uint16_t offset, uint8_t value) {
+    uint8_t channel = offset / 16;
+    uint8_t reg = offset % 16;
+    
+    // Update sound structure based on memory write
+    switch (reg) {
+        case 0x0:
+            sound_system.channels[channel].frequency = 
+                (sound_system.channels[channel].frequency & 0xFF00) | value;
+            // Call function to update sound frequency
+            break;
+        case 0x1:
+            sound_system.channels[channel].frequency = 
+                (sound_system.channels[channel].frequency & 0x00FF) | (value << 8);
+            // Call function to update sound frequency
+            break;
+        case 0x2:
+            sound_system.channels[channel].volume = value;
+            // Call function to update sound volume
+            break;
+        default:
+            printf("Write to sound channel %04X:%04X = %02X\n", channel, reg, value);
+            break;
+    }
+}
+
 uint8_t memory_read_byte(uint16_t address) {
     if (address < MEMORY_SIZE) {
-        return memory[address] & 0xFF;
+        MemoryRegionType region_type = memory_get_region(address);
+        MemoryRegion* region = &memory_regions[region_type];
+        if (region->memory_mapped_io) {
+            switch (region_type)
+            {
+            case REGION_INPUT:
+                // Handle input register
+                break;
+            case REGION_SOUND:
+                // Handle sound registers
+                break;
+            }
+        }
+        else {
+            return memory[address] & 0xFF;
+        }
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
         return 0;
@@ -75,7 +204,23 @@ uint8_t memory_read_byte(uint16_t address) {
 }
 
 uint16_t memory_read_word(uint16_t address) {
-    if (address < MEMORY_SIZE - 1) {
+    if (address < MEMORY_SIZE) {
+        MemoryRegionType region_type = memory_get_region(address);
+        MemoryRegion* region = &memory_regions[region_type];
+        if (region->memory_mapped_io) {
+            switch (region_type)
+            {
+            case REGION_INPUT:
+                // Handle input register
+                break;
+            case REGION_SOUND:
+                // Handle sound registers
+                break;
+            }
+        }
+        else {
+            return memory[address] & 0xFF;
+        }
         return memory[address];
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
@@ -85,8 +230,8 @@ uint16_t memory_read_word(uint16_t address) {
 
 bool memory_write_byte(uint16_t address, uint8_t data) {
     if (address < MEMORY_SIZE) {
-        MemoryRegionType region = memory_get_region(address);
-        if (memory_regions[region].read_only == false) {
+        MemoryRegionType region_type = memory_get_region(address);
+        if (memory_regions[region_type].read_only == false) {
             memory[address] = (memory[address] & 11110000) ^ data;
             return true;
         } else {

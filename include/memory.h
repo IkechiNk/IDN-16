@@ -37,7 +37,7 @@
 #define SYSTEM_ROM_START 0x5400
 #define SYSTEM_ROM_END 0x63FF
 
-// Memory Region Type
+// Memory regions
 typedef enum {
     REGION_ROM,
     REGION_RAM,
@@ -50,6 +50,7 @@ typedef enum {
     REGION_COUNT // Enum defines automatically
 } MemoryRegionType;
 
+// Memory region structure
 typedef struct {
     uint16_t start_address;
     uint16_t end_address;
@@ -57,6 +58,22 @@ typedef struct {
     bool memory_mapped_io;
     const char* name; // Debugging purposes
 } MemoryRegion;
+
+typedef struct {
+    uint16_t frequency;
+    uint8_t volume;
+    uint8_t waveform;
+    uint8_t duty_cycle;
+    uint8_t status;
+    uint8_t envelope_settings;
+    bool enabled;
+} SoundChannel;
+
+typedef struct {
+    SoundChannel channels[4];
+    uint8_t master_volume;
+    uint8_t audio_control;
+} SoundSystem;
 
 /* Initializes memory with default values of 0, */
 void memory_init(void); 
