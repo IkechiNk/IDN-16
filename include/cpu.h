@@ -59,21 +59,6 @@ uint16_t fetch();
 shared decode(uint16_t instruction);
 
 /*
- * Returns the results of the execute stage.
- * The shared struct returned by execute is passed as
- * the input to memory.
+ * Executes the decoded instruction.
  */
-shared execute(shared info);
-
-/*
- * Updates the memory.
- * Returns the results of the memory stage.
- * The shared struct returned by memory is passed as
- * the input to writeback.
- */
-shared memory(shared info);
-
-/*
- * Updates the registers and program counter.
- */
-void writeback(shared info);
+void execute(shared info);

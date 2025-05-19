@@ -38,6 +38,7 @@
 #define	DEC 29
 #define	PUSH 30
 #define	POP 31
+#define LUI 32
 
 void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
 void sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
@@ -68,7 +69,8 @@ void ret(Cpu_T *cpu);
 
 void hlt(Cpu_T *cpu);
 void nop(Cpu_T *cpu);
-void inc(uint16_t rs1, Cpu_T *cpu);
-void dec(uint16_t rs1, Cpu_T *cpu);
-void push(Cpu_T *cpu);
-void pop(Cpu_T *cpu);
+void inc(uint16_t rd, Cpu_T *cpu);
+void dec(uint16_t rd, Cpu_T *cpu);
+void push(uint16_t rd, Cpu_T *cpu);
+void pop(uint16_t rd, Cpu_T *cpu);
+void lui(uint16_t rd, uint16_t imm, Cpu_T *cpu);

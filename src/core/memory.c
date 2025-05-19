@@ -1,7 +1,6 @@
 #include "include/memory.h"
 #include <SDL2/SDL.h>
 
-uint8_t memory[MEMORY_SIZE];
 SoundSystem sound_system;
 
 // Memory regions
@@ -17,7 +16,7 @@ static const MemoryRegion memory_regions[REGION_COUNT] = {
     {SYSTEM_ROM_START, SYSTEM_ROM_END, true, false, "System ROM"},
 };
 
-void initialize_rom(void) {
+void initialize_rom(uint8_t memory[]) {
     // Load ROM data into memory
     FILE *rom_file = fopen("rom.bin", "rb");
     if (rom_file) {
@@ -45,7 +44,7 @@ void load_startup(void) {
 //     return (r << 16) | (g << 8) | b;
 // }
 
-void initialize_palettes(void) {
+void initialize_palettes(uint8_t memory[]) {
     uint16_t default_palette[16] = {
         0x0000, // Black
         0xFFFF, // White
@@ -56,11 +55,11 @@ void initialize_palettes(void) {
     memcpy(&memory[PALETTE_MEM_START], default_palette, sizeof(default_palette));
 }
 
-void memory_init(void) {
+void memory_init(uint8_t memory[]) {
     memset(memory, 0, MEMORY_SIZE);
 
-    initialize_rom();
-    initialize_palettes();
+    initialize_rom(memory);
+    initialize_palettes(memory);
     // TODO: Initialize system rom with handlers and functions
     load_startup();
 }
@@ -184,9 +183,9 @@ bool handle_sound_write(uint16_t offset, uint8_t value) {
     }
 }
 
-uint8_t memory_read_byte(uint16_t address) {
+uint8_t memory_read_byte(uint8_t memory[], uint16_t address) {
     if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(memory,address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->memory_mapped_io && region_type != REGION_COUNT) {
             switch (region_type)
@@ -208,9 +207,9 @@ uint8_t memory_read_byte(uint16_t address) {
     }
 }
 
-uint16_t memory_read_word(uint16_t address) {
+uint16_t memory_read_word(uint8_t memory[], uint16_t address) {
     if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(memory,address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->memory_mapped_io && region_type != REGION_COUNT) {
             switch (region_type)
@@ -236,9 +235,9 @@ uint16_t memory_read_word(uint16_t address) {
     }
 }
 
-bool memory_write_byte(uint16_t address, uint8_t data) {
+bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data) {
     if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(memory, address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->read_only) {
             fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
@@ -267,9 +266,9 @@ bool memory_write_byte(uint16_t address, uint8_t data) {
     }
 }
 
-bool memory_write_word(uint16_t address, uint16_t data) {
+bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data) {
     if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(memory, address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->read_only) {
             fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
@@ -303,7 +302,7 @@ bool memory_write_word(uint16_t address, uint16_t data) {
     }
 }
 
-MemoryRegion_t memory_get_region(uint16_t address) {
+MemoryRegion_t memory_get_region(uint8_t memory[], uint16_t address) {
     for (int i = 0; i < REGION_COUNT; i++) {
         if (address >= memory_regions[i].start_address && address <= memory_regions[i].end_address) {
             return (MemoryRegion_t) i;
@@ -312,7 +311,7 @@ MemoryRegion_t memory_get_region(uint16_t address) {
     return REGION_COUNT; // Invalid region
 }
 
-void memory_dump(uint16_t start, uint16_t length) {
+void memory_dump(uint8_t memory[], uint16_t start, uint16_t length) {
     for (int i = start; i < start + length; i++) {
         if (i >= MEMORY_SIZE) {
             printf("\nReached end of memory.");

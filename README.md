@@ -146,55 +146,56 @@ All instructions are 16 bits wide:
 ### Specific Opcodes and categories
 #### REG-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                       |
-| ------- | ------------------------------------- | --------------------------- |
-| 00000   | ADD rd, rs1, rs2                      | Add registers               |
-| 00001   | SUB rd, rs1, rs2                      | Subtract registers          |
-| 00010   | AND rd, rs1, rs2                      | Bitwise AND                 |
-| 00011   | OR rd, rs1, rs2                       | Bitwise OR                  |
-| 00100   | XOR rd, rs1, rs2                      | Bitwise XOR                 |
-| 00101   | SHL rd, rs1, rs2                      | Shift left                  |
-| 00110   | SHR rd, rs1, rs2 (func=00)            | Shift right logical         |
-| 00110   | SRA rd, rs1, rs2 (func=01)            | Shift right arithmetic      |
-| 00111   | MOV rd, rs1 (func=00)                 | Copy register               |
-| 00111   | CMP rd, rs1, rs2 (func=01)            | Compare regs and set flags  |
-| 00111   | NOT rd, rs1 (func=10)                 | Bitwise NOT                 |
+| Opcode  | Assembly Syntax                       | Usage                           |
+| ------- | ------------------------------------- | ------------------------------- |
+| 00000   | ADD rd, rs1, rs2                      | Add registers                   |
+| 00001   | SUB rd, rs1, rs2                      | Subtract registers              |
+| 00010   | AND rd, rs1, rs2                      | Bitwise AND                     |
+| 00011   | OR rd, rs1, rs2                       | Bitwise OR                      |
+| 00100   | XOR rd, rs1, rs2                      | Bitwise XOR                     |
+| 00101   | SHL rd, rs1, rs2                      | Shift left                      |
+| 00110   | SHR rd, rs1, rs2 (func=00)            | Shift right logical             |
+| 00110   | SRA rd, rs1, rs2 (func=01)            | Shift right arithmetic          |
+| 00111   | MOV rd, rs1 (func=00)                 | Copy register                   |
+| 00111   | CMP rd, rs1, rs2 (func=01)            | Compare regs and set flags      |
+| 00111   | NOT rd, rs1 (func=10)                 | Bitwise NOT                     |
 
 #### IMM-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                       |
-| ------- | ------------------------------------- | --------------------------- |
-| 01000   | LDI rd, imm                           | Load immediate              |
-| 01001   | LD rd, [rs1+imm]                      | Load from memory            |
-| 01010   | ST [rd+imm], rs1                      | Store to memory             |
-| 01011   | ADDI rd, rs1, imm                     | Add immediate               |
-| 01100   | SUBI rd, rs1, imm                     | Subtract immediate          |
-| 01101   | ANDI rd, rs1, imm                     | AND immediate               |
-| 01110   | ORI rd, rs1, imm                      | OR immediate                |
-| 01111   | XORI rd, rs1, imm                     | XOR immediate               |
+| Opcode  | Assembly Syntax                       | Usage                           |
+| ------- | ------------------------------------- | ------------------------------- |
+| 01000   | LDI rd, imm                           | Load immediate                  |
+| 01001   | LD rd, [rs1+imm]                      | Load word from memory           |
+| 01010   | ST [rd+imm], rs1                      | Store word to memory            |
+| 01011   | ADDI rd, rs1, imm                     | Add immediate                   |
+| 01100   | SUBI rd, rs1, imm                     | Subtract immediate              |
+| 01101   | ANDI rd, rs1, imm                     | AND immediate                   |
+| 01110   | ORI rd, rs1, imm                      | OR immediate                    |
+| 01111   | XORI rd, rs1, imm                     | XOR immediate                   |
 
 #### JB-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                       |
-| ------- | ------------------------------------- | --------------------------- |
-| 10000   | JMP offset                            | Unconditional jump          |
-| 10001   | JEQ offset                            | Jump if equal               |
-| 10010   | JNE offset                            | Jump if not equal           |
-| 10011   | JGT offset                            | Jump if greater than        |
-| 10100   | JLT offset                            | Jump if less than           |
-| 10101   | JSR offset                            | Jump to subroutine          |
-| 10110   | RET                                   | Return from subroutine      |
+| Opcode  | Assembly Syntax                       | Usage                           |
+| ------- | ------------------------------------- | ------------------------------- |
+| 10000   | JMP offset                            | Unconditional jump              |
+| 10001   | JEQ offset                            | Jump if equal                   |
+| 10010   | JNE offset                            | Jump if not equal               |
+| 10011   | JGT offset                            | Jump if greater than            |
+| 10100   | JLT offset                            | Jump if less than               |
+| 10101   | JSR offset                            | Jump to subroutine              |
+| 10110   | RET                                   | Return from subroutine          |
 
 #### SP-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                       |
-| ------- | ------------------------------------- | --------------------------- |
-| 11000   | HLT                                   | Halt processor              |
-| 11001   | NOP                                   | No operation                |
-| 11010   | INC rd                                | Increment register          |
-| 11011   | DEC rd                                | Decrement register          |
-| 11100   | PUSH rd                               | Push register to stack      |
-| 11101   | POP rd                                | Pop from stack to register  |
+| Opcode  | Assembly Syntax                       | Usage                           |
+| ------- | ------------------------------------- | ------------------------------- |
+| 11000   | HLT                                   | Halt processor                  |
+| 11001   | NOP                                   | No operation                    |
+| 11010   | INC rd                                | Increment register              |
+| 11011   | DEC rd                                | Decrement register              |
+| 11100   | PUSH rd                               | Push register to stack          |
+| 11101   | POP rd                                | Pop from stack to register      |
+| 11110   | LUI rd, imm                           | Load immediate to upper 8 bits  |
 
 ### Assembly Language
 #### Syntax Overview

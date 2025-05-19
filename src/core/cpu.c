@@ -9,6 +9,13 @@ Cpu_T* cpu_init(void)
 {
     cpu.pc = 0;
     memset(cpu.r, 0, sizeof(cpu.r));
+    memory_init(cpu.memory);
+    cpu.flags.z = 0;
+    cpu.flags.n = 0;
+    cpu.flags.c = 0;
+    cpu.flags.v = 0;
+    cpu.flags.i = 0;
+    cpu.flags.reserved = 0;
     cpu.cycles = 0;
     cpu.running = true;
     return &cpu;
@@ -16,7 +23,7 @@ Cpu_T* cpu_init(void)
 
 uint16_t fetch_stage()
 {
-    return memory_read_word(cpu.pc);
+    return memory_read_word(cpu.memory, cpu.pc);
 }
 
 shared reg_decode(uint16_t instruction)
@@ -188,4 +195,106 @@ shared decode_stage(uint16_t instruction)
         fprintf(stderr, "Error: Invalid Instruction Used.\n");
     } 
     return i;
+}
+void execute_stage(shared i) {
+    switch (i.inst) {
+        case ADD:
+            add(i.first, i.second, i.third, &cpu);
+            break;
+        case SUB:
+            sub(i.first, i.second, i.third, &cpu);
+            break;
+        case AND:
+            and(i.first, i.second, i.third, &cpu);
+            break;
+        case OR:
+            or(i.first, i.second, i.third, &cpu);
+            break;
+        case XOR:
+            xor(i.first, i.second, i.third, &cpu);
+            break;
+        case SHL:
+            shl(i.first, i.second, i.third, &cpu);
+            break;
+        case SHR:
+            shr(i.first, i.second, i.third, &cpu);
+            break;
+        case SRA:
+            sra(i.first, i.second, i.third, &cpu);
+            break;
+        case MOV:
+            mov(i.first, i.second, &cpu);
+            break;
+        case CMP:
+            cmp(i.first, i.second, i.third, &cpu);
+            break;
+        case NOT:
+            not(i.first, i.second, &cpu);
+            break;
+        case LDI:
+            ldi(i.first, (i.third), &cpu);
+            break;
+        case LD:
+            ld(i.first,i.second,i.third,&cpu);
+            break;
+        case ST:
+            st(i.first,i.second,i.third,&cpu);
+            break;
+        case ADDI:
+            addi(i.first,i.second,i.third,&cpu);
+            break;
+        case SUBI:
+            subi(i.first,i.second,i.third,&cpu);
+            break;
+        case ANDI:
+            andi(i.first,i.second,i.third,&cpu);
+            break;
+        case ORI:
+            ori(i.first,i.second,i.third,&cpu);
+            break;
+        case XORI:
+            xori(i.first,i.second,i.third,&cpu);
+            break;
+        case JMP:
+            jmp(i.first,&cpu);
+            break;
+        case JEQ:
+            jeq(i.first,&cpu);
+            break;
+        case JNE:
+            jne(i.first,&cpu);
+            break;
+        case JGT:
+            jgt(i.first,&cpu);
+            break;
+        case JLT:
+            jlt(i.first,&cpu);
+            break;
+        case JSR:
+            jsr(i.first,&cpu);
+            break;
+        case RET:
+            ret(&cpu);
+            break;
+        case HLT:
+            hlt(&cpu);
+            break;
+        case NOP:
+            nop(&cpu);
+            break;
+        case INC:
+            inc(i.first, &cpu);
+            break;
+        case DEC:
+            dec(i.first, &cpu);
+            break;
+        case PUSH:
+            push(i.first, &cpu);
+            break;
+        case POP:
+            pop(i.first, &cpu);
+            break;
+        default:
+            fprintf(stderr, "Error: Invalid Instruction Used.\n");
+            break;
 }
