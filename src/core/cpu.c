@@ -1,4 +1,5 @@
 #include "include/cpu.h"
+#include "include/instructions.h"
 #include <stdio.h>
 #include <string.h>
 

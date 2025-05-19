@@ -1,3 +1,4 @@
+#include "include/cpu.h"
 // REG-format
 #define ADD 0
 #define SUB 1
@@ -38,38 +39,36 @@
 #define	PUSH 30
 #define	POP 31
 
-uint16_t add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t and(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t or(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t xor(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t shl(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t shr(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t sra(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t mov(uint16_t rd, uint16_t rs1, Cpu_T *cpu);
-uint16_t cmp(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
-uint16_t not(uint16_t rd, uint16_t rs1, Cpu_T *cpu);
-
-uint16_t ldi(uint16_t rd, uint16_t imm, Cpu_T *cpu);
-uint16_t ld(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-uint16_t st(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-uint16_t addi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-uint16_t subi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-uint16_t andi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-uint16_t ori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-uint16_t xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
-
-uint16_t jmp(uint16_t imm, Cpu_T *cpu);
-uint16_t jeq(uint16_t imm, Cpu_T *cpu);
-uint16_t jne(uint16_t imm, Cpu_T *cpu);
-uint16_t jgt(uint16_t imm, Cpu_T *cpu);
-uint16_t jlt(uint16_t imm, Cpu_T *cpu);
-uint16_t jsr(uint16_t imm, Cpu_T *cpu);
-uint16_t ret(Cpu_T *cpu);
+void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void and(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void or(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void xor(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void shl(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void shr(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void sra(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void mov(uint16_t rd, uint16_t rs1, Cpu_T *cpu);
+void cmp(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void not(uint16_t rd, uint16_t rs1, Cpu_T *cpu);
+void ldi(uint16_t rd, uint16_t imm, Cpu_T *cpu);
+void ld(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void st(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void addi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void subi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void andi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void ori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
+void jmp(uint16_t imm, Cpu_T *cpu);
+void jeq(uint16_t imm, Cpu_T *cpu);
+void jne(uint16_t imm, Cpu_T *cpu);
+void jgt(uint16_t imm, Cpu_T *cpu);
+void jlt(uint16_t imm, Cpu_T *cpu);
+void jsr(uint16_t imm, Cpu_T *cpu);
+void ret(Cpu_T *cpu);
 
 void hlt(Cpu_T *cpu);
 void nop(Cpu_T *cpu);
-uint16_t inc(uint16_t rs1, Cpu_T *cpu);
-uint16_t dec(uint16_t rs1, Cpu_T *cpu);
+void inc(uint16_t rs1, Cpu_T *cpu);
+void dec(uint16_t rs1, Cpu_T *cpu);
 void push(Cpu_T *cpu);
-uint16_t pop(Cpu_T *cpu);
+void pop(Cpu_T *cpu);

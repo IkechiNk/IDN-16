@@ -1,6 +1,3 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include "include/instructions.h"
 #include "include/memory.h"
 
 typedef struct {
