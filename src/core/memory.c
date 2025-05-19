@@ -1,7 +1,7 @@
 #include "include/memory.h"
 #include <SDL2/SDL.h>
-// Memory array
-uint16_t memory[MEMORY_SIZE];
+
+uint8_t memory[MEMORY_SIZE];
 SoundSystem sound_system;
 
 // Memory regions
@@ -61,7 +61,6 @@ void memory_init(void) {
 
     initialize_rom();
     initialize_palettes();
-    initialize_system_control();
     // TODO: Initialize system rom with handlers and functions
     load_startup();
 }
@@ -70,14 +69,14 @@ uint8_t get_controller1_button_state() {
     uint8_t button_state = 0;
     
     // Check real keyboard/gamepad and set bits accordingly
-    if (is_key_pressed(SDL_SCANCODE_F))        button_state |= 0x01; // A button
-    if (is_key_pressed(SDL_SCANCODE_G))        button_state |= 0x02; // B button
-    if (is_key_pressed(SDL_SCANCODE_TAB))   button_state |= 0x04; // Start
+    if (is_key_pressed(SDL_SCANCODE_F))         button_state |= 0x01; // A button
+    if (is_key_pressed(SDL_SCANCODE_G))         button_state |= 0x02; // B button
+    if (is_key_pressed(SDL_SCANCODE_TAB))       button_state |= 0x04; // Start
     if (is_key_pressed(SDL_SCANCODE_LSHIFT))    button_state |= 0x08; // Select
-    if (is_key_pressed(SDL_SCANCODE_W))       button_state |= 0x10; // Up
-    if (is_key_pressed(SDL_SCANCODE_S))     button_state |= 0x20; // Down
-    if (is_key_pressed(SDL_SCANCODE_A))     button_state |= 0x40; // Left
-    if (is_key_pressed(SDL_SCANCODE_D))    button_state |= 0x80; // Right
+    if (is_key_pressed(SDL_SCANCODE_W))         button_state |= 0x10; // Up
+    if (is_key_pressed(SDL_SCANCODE_S))         button_state |= 0x20; // Down
+    if (is_key_pressed(SDL_SCANCODE_A))         button_state |= 0x40; // Left
+    if (is_key_pressed(SDL_SCANCODE_D))         button_state |= 0x80; // Right
     
     return button_state;
 }
@@ -86,26 +85,26 @@ uint8_t get_controller2_button_state() {
     uint8_t button_state = 0;
     
     // Check real keyboard/gamepad and set bits accordingly
-    if (is_key_pressed(SDL_SCANCODE_J))        button_state |= 0x01; // A button
-    if (is_key_pressed(SDL_SCANCODE_K))        button_state |= 0x02; // B button
-    if (is_key_pressed(SDL_SCANCODE_RETURN))   button_state |= 0x04; // Start
+    if (is_key_pressed(SDL_SCANCODE_J))         button_state |= 0x01; // A button
+    if (is_key_pressed(SDL_SCANCODE_K))         button_state |= 0x02; // B button
+    if (is_key_pressed(SDL_SCANCODE_RETURN))    button_state |= 0x04; // Start
     if (is_key_pressed(SDL_SCANCODE_RSHIFT))    button_state |= 0x08; // Select
-    if (is_key_pressed(SDL_SCANCODE_UP))       button_state |= 0x10; // Up
-    if (is_key_pressed(SDL_SCANCODE_DOWN))     button_state |= 0x20; // Down
-    if (is_key_pressed(SDL_SCANCODE_LEFT))     button_state |= 0x40; // Left
-    if (is_key_pressed(SDL_SCANCODE_RIGHT))    button_state |= 0x80; // Right
+    if (is_key_pressed(SDL_SCANCODE_UP))        button_state |= 0x10; // Up
+    if (is_key_pressed(SDL_SCANCODE_DOWN))      button_state |= 0x20; // Down
+    if (is_key_pressed(SDL_SCANCODE_LEFT))      button_state |= 0x40; // Left
+    if (is_key_pressed(SDL_SCANCODE_RIGHT))     button_state |= 0x80; // Right
     
     return button_state;
 }
 
 
-uint16_t handle_input_read(uint16_t offset) {
+uint8_t handle_input_read(uint16_t offset) {
     switch (offset) {
         case 0x00: // Controller 1 state
-            return get_controller1_button_state;
+            return get_controller1_button_state();
             break;
         case 0x01: // Controller 2 state
-            return get_controller2_button_state;
+            return get_controller2_button_state();
             break;
         default:
             return 0x00; // Invalid offset
@@ -134,7 +133,7 @@ uint8_t handle_sound_read(uint16_t offset) {
             return sound_system.channels[channel].volume;
             break;
         default:
-            printf("Read from sound channel %04X:%04X\n", channel, reg);
+            printf("Read from sound channel: %04X:%04X\n", channel, reg);
             break;
     }
     return 0;
@@ -149,7 +148,7 @@ bool handle_input_write(uint16_t offset, uint8_t value) {
             return false; 
             break;
         default:    
-            printf("Write to input register (nothing actually written): %04X = %02X\n", offset, value);
+            printf("(nothing actually written) Write to input register: %04X = %02X\n", offset, value);
             return true; 
             break;       
     }
@@ -179,28 +178,29 @@ bool handle_sound_write(uint16_t offset, uint8_t value) {
             return true;
             break;
         default:
-            printf("Write to sound channel %04X:%04X = %02X\n", channel, reg, value);
+            printf("(nothing actually written) Write to sound channel: %04X:%04X = %02X\n", channel, reg, value);
+            return true;
             break;
     }
 }
 
 uint8_t memory_read_byte(uint16_t address) {
     if (address < MEMORY_SIZE) {
-        MemoryRegionType region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->memory_mapped_io && region_type != REGION_COUNT) {
             switch (region_type)
             {
             case REGION_INPUT:
-                handle_input_read(address - INPUT_REG_START);
+                return handle_input_read(address - INPUT_REG_START);
                 break;
             case REGION_SOUND:
-                handle_sound_read(address - SOUND_REG_START);
+                return handle_sound_read(address - SOUND_REG_START);
                 break;
             }
         }
         else {
-            return memory[address] & 0xFF;
+            return memory[address];
         }
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
@@ -210,21 +210,25 @@ uint8_t memory_read_byte(uint16_t address) {
 
 uint16_t memory_read_word(uint16_t address) {
     if (address < MEMORY_SIZE) {
-        MemoryRegionType region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->memory_mapped_io && region_type != REGION_COUNT) {
             switch (region_type)
             {
             case REGION_INPUT:
-                handle_input_read(address - INPUT_REG_START);
+                return handle_input_read(address - INPUT_REG_START);
                 break;
             case REGION_SOUND:
-                handle_sound_read(address - SOUND_REG_START);
+                return handle_sound_read(address - SOUND_REG_START);
                 break;
             }
         }
         else {
-            return memory[address] & 0xFF;
+            if (address == MEMORY_SIZE - 1) {
+                fprintf(stderr, "Error: Attempt to read word from odd address.\n");
+                return 0;
+            }
+            return (memory[address] << 8) | (memory[address + 1]);
         }
     } else {
         fprintf(stderr, "Error: Address out of bounds.\n");
@@ -234,38 +238,7 @@ uint16_t memory_read_word(uint16_t address) {
 
 bool memory_write_byte(uint16_t address, uint8_t data) {
     if (address < MEMORY_SIZE) {
-        MemoryRegionType region_type = memory_get_region(address);
-        MemoryRegion* region = &memory_regions[region_type];
-        if (region->read_only) {
-            fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
-            return false;
-        }
-        if (region->memory_mapped_io && region_type != REGION_COUNT) {
-            bool success = false;
-            switch (region_type)
-            {
-            case REGION_INPUT:
-                success = handle_input_write(address - INPUT_REG_START, data);
-                break;
-            case REGION_SOUND:
-                success = handle_sound_write(address - SOUND_REG_START, data);
-                break;
-            }
-            return success;
-        }
-        else {
-            memory[address] = (memory[address] & 0xFF00) | data;
-            return true;
-        }
-    } else {
-        fprintf(stderr, "Error: Address out of bounds.\n");
-        return false;
-    }
-}
-
-bool memory_write_word(uint16_t address, uint16_t data) {
-    if (address < MEMORY_SIZE) {
-        MemoryRegionType region_type = memory_get_region(address);
+        MemoryRegion_t region_type = memory_get_region(address);
         MemoryRegion* region = &memory_regions[region_type];
         if (region->read_only) {
             fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
@@ -294,10 +267,46 @@ bool memory_write_word(uint16_t address, uint16_t data) {
     }
 }
 
-MemoryRegionType memory_get_region(uint16_t address) {
+bool memory_write_word(uint16_t address, uint16_t data) {
+    if (address < MEMORY_SIZE) {
+        MemoryRegion_t region_type = memory_get_region(address);
+        MemoryRegion* region = &memory_regions[region_type];
+        if (region->read_only) {
+            fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
+            return false;
+        }
+        if (region->memory_mapped_io && region_type != REGION_COUNT) {
+            bool success = false;
+            switch (region_type)
+            {
+            case REGION_INPUT:
+                success = handle_input_write(address - INPUT_REG_START, data);
+                break;
+            case REGION_SOUND:
+                success = handle_sound_write(address - SOUND_REG_START, data);
+                break;
+            }
+            return success;
+        }
+        else {
+            if (address == MEMORY_SIZE - 1) {
+                fprintf(stderr, "Error: Attempt to write word to odd address.\n");
+                return false;
+            }
+            memory[address] = data | 0xFF00;
+            memory[address + 1] = data & 0x00FF;
+            return true;
+        }
+    } else {
+        fprintf(stderr, "Error: Address out of bounds.\n");
+        return false;
+    }
+}
+
+MemoryRegion_t memory_get_region(uint16_t address) {
     for (int i = 0; i < REGION_COUNT; i++) {
         if (address >= memory_regions[i].start_address && address <= memory_regions[i].end_address) {
-            return (MemoryRegionType) i;
+            return (MemoryRegion_t) i;
         }
     }
     return REGION_COUNT; // Invalid region

@@ -48,7 +48,7 @@ typedef enum {
     REGION_INPUT,
     REGION_SYSTEM,
     REGION_COUNT // Enum defines automatically
-} MemoryRegionType;
+} MemoryRegion_t;
 
 // Memory region structure
 typedef struct {
@@ -75,7 +75,9 @@ typedef struct {
     uint8_t audio_control;
 } SoundSystem;
 
-/* Initializes memory with default values of 0, */
+/* Byte addressable system memory. */
+uint8_t memory[];
+/* Initializes memory with default values of 0. */
 void memory_init(void); 
 /* Reads a byte from memory.*/
 uint8_t memory_read_byte(uint16_t address);
@@ -86,6 +88,6 @@ bool memory_write_byte(uint16_t address, uint8_t data);
 /* Writes given word to memory address. Returns success of operation. */
 bool memory_write_word(uint16_t address, uint16_t data);
 /* Returns the region type of the given address. */ 
-MemoryRegionType memory_get_region(uint16_t address);
+MemoryRegion_t memory_get_region(uint16_t address);
 /* Dumps words stored in memory from address start to stdout.*/
 void memory_dump(uint16_t start, uint16_t length);
