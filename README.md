@@ -164,11 +164,11 @@ All instructions are 16 bits wide:
 
 | Opcode  | Assembly Syntax                       | Usage                           |
 | ------- | ------------------------------------- | ------------------------------- |
-| 01000   | LDI rd, imm                           | Load immediate                  |
+| 01000   | LDI rd, imm (8 bits)                  | Load immediate (MSB Extends)    |
 | 01001   | LD rd, [rs1+imm]                      | Load word from memory           |
-| 01010   | ST [rd+imm], rs1                      | Store word to memory            |
-| 01011   | ADDI rd, rs1, imm                     | Add immediate                   |
-| 01100   | SUBI rd, rs1, imm                     | Subtract immediate              |
+| 01010   | ST rd, [rs1+imm]                      | Store word to memory            |
+| 01011   | ADDI rd, rs1, imm                     | Add immediate (MSB Extends)     |
+| 01100   | LUI rd, imm (8 bits)                  | Load immediate to upper 8 bits  |
 | 01101   | ANDI rd, rs1, imm                     | AND immediate                   |
 | 01110   | ORI rd, rs1, imm                      | OR immediate                    |
 | 01111   | XORI rd, rs1, imm                     | XOR immediate                   |
@@ -195,7 +195,6 @@ All instructions are 16 bits wide:
 | 11011   | DEC rd                                | Decrement register              |
 | 11100   | PUSH rd                               | Push register to stack          |
 | 11101   | POP rd                                | Pop from stack to register      |
-| 11110   | LUI rd, imm                           | Load immediate to upper 8 bits  |
 
 ### Assembly Language
 #### Syntax Overview

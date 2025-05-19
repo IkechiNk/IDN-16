@@ -1,5 +1,5 @@
-#include "include/memory.h"
-#include <SDL2/SDL.h>
+#include "memory.h"
+#include "keyboard.c"
 
 SoundSystem sound_system;
 
@@ -23,7 +23,7 @@ void initialize_rom(uint8_t memory[]) {
         fread(&memory[ROM_START], 1, ROM_SIZE, rom_file);
         fclose(rom_file);
     } else {
-        fprintf(stderr, "Error: Could not open ROM file.\n");
+        fprintf(stderr, "Alert: No rom loaded.\n");
     }
 }
 
@@ -132,7 +132,7 @@ uint8_t handle_sound_read(uint16_t offset) {
             return sound_system.channels[channel].volume;
             break;
         default:
-            printf("Read from sound channel: %04X:%04X\n", channel, reg);
+            printf("Read from sound channel: 0x%04X:0x%04X\n", channel, reg);
             break;
     }
     return 0;
@@ -143,11 +143,11 @@ bool handle_input_write(uint16_t offset, uint8_t value) {
     switch (offset) {
         case 0x00: 
         case 0x01:
-            printf("Write to read-only register: %04X\n", offset);
+            printf("Write to read-only input register: 0x%04X\n", offset);
             return false; 
             break;
         default:    
-            printf("(nothing actually written) Write to input register: %04X = %02X\n", offset, value);
+            printf("(nothing actually written) Write to input register: 0x%04X = %u\n", offset, value);
             return true; 
             break;       
     }
@@ -177,132 +177,128 @@ bool handle_sound_write(uint16_t offset, uint8_t value) {
             return true;
             break;
         default:
-            printf("(nothing actually written) Write to sound channel: %04X:%04X = %02X\n", channel, reg, value);
+            printf("(nothing actually written) Write to sound channel: 0x%04X:0x%04X = %u\n", channel, reg, value);
             return true;
             break;
     }
 }
 
 uint8_t memory_read_byte(uint8_t memory[], uint16_t address) {
-    if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(memory,address);
-        MemoryRegion* region = &memory_regions[region_type];
-        if (region->memory_mapped_io && region_type != REGION_COUNT) {
-            switch (region_type)
-            {
-            case REGION_INPUT:
-                return handle_input_read(address - INPUT_REG_START);
-                break;
-            case REGION_SOUND:
-                return handle_sound_read(address - SOUND_REG_START);
-                break;
-            }
+    MemoryRegion_t region_type = memory_get_region(address);
+    const MemoryRegion* region = &memory_regions[region_type];
+    if (region->memory_mapped_io && region_type != REGION_COUNT) {
+        switch (region_type)
+        {
+        case REGION_INPUT:
+            return handle_input_read(address - INPUT_REG_START);
+            break;
+        case REGION_SOUND:
+            return handle_sound_read(address - SOUND_REG_START);
+            break;
+        default:
+            printf("Read from memory-mapped I/O: 0x%04X\n", address);
+            return 0x00;
+            break;
         }
-        else {
-            return memory[address];
-        }
-    } else {
-        fprintf(stderr, "Error: Address out of bounds.\n");
-        return 0;
+    }
+    else {
+        return memory[address];
     }
 }
 
 uint16_t memory_read_word(uint8_t memory[], uint16_t address) {
-    if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(memory,address);
-        MemoryRegion* region = &memory_regions[region_type];
-        if (region->memory_mapped_io && region_type != REGION_COUNT) {
-            switch (region_type)
-            {
-            case REGION_INPUT:
-                return handle_input_read(address - INPUT_REG_START);
-                break;
-            case REGION_SOUND:
-                return handle_sound_read(address - SOUND_REG_START);
-                break;
-            }
+    MemoryRegion_t region_type = memory_get_region(address);
+    const MemoryRegion* region = &memory_regions[region_type];
+    if (region->memory_mapped_io && region_type != REGION_COUNT) {
+        switch (region_type)
+        {
+        case REGION_INPUT:
+            return handle_input_read(address - INPUT_REG_START);
+            break;
+        case REGION_SOUND:
+            return handle_sound_read(address - SOUND_REG_START);
+            break;
+        default:
+            printf("Read from memory-mapped I/O: 0x%04X\n", address);
+            return 0x00;
+            break;
         }
-        else {
-            if (address == MEMORY_SIZE - 1) {
-                fprintf(stderr, "Error: Attempt to read word from odd address.\n");
-                return 0;
-            }
-            return (memory[address] << 8) | (memory[address + 1]);
+    }
+    else {
+        if (address == MEMORY_SIZE - 1) {
+            fprintf(stderr, "Error: Attempt to read word from odd address.\n");
+            return 0;
         }
-    } else {
-        fprintf(stderr, "Error: Address out of bounds.\n");
-        return 0;
+        uint16_t data = (uint16_t)memory[address] << 8;
+        data |= memory[address + 1];
+        return data;
     }
 }
 
 bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data) {
-    if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(memory, address);
-        MemoryRegion* region = &memory_regions[region_type];
-        if (region->read_only) {
-            fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
-            return false;
-        }
-        if (region->memory_mapped_io && region_type != REGION_COUNT) {
-            bool success = false;
-            switch (region_type)
-            {
-            case REGION_INPUT:
-                success = handle_input_write(address - INPUT_REG_START, data);
-                break;
-            case REGION_SOUND:
-                success = handle_sound_write(address - SOUND_REG_START, data);
-                break;
-            }
-            return success;
-        }
-        else {
-            memory[address] = data;
-            return true;
-        }
-    } else {
-        fprintf(stderr, "Error: Address out of bounds.\n");
+    MemoryRegion_t region_type = memory_get_region(address);
+    const MemoryRegion* region = &memory_regions[region_type];
+    if (region->read_only) {
+        fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
         return false;
+    }
+    if (region->memory_mapped_io && region_type != REGION_COUNT) {
+        bool success = false;
+        switch (region_type)
+        {
+        case REGION_INPUT:
+            success = handle_input_write(address - INPUT_REG_START, data);
+            break;
+        case REGION_SOUND:
+            success = handle_sound_write(address - SOUND_REG_START, data);
+            break;
+        default:
+            printf("Write to memory-mapped I/O: 0x%04X\n", address);
+            break;
+        }
+        return success;
+    }
+    else {
+        memory[address] = data;
+        return true;
     }
 }
 
 bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data) {
-    if (address < MEMORY_SIZE) {
-        MemoryRegion_t region_type = memory_get_region(memory, address);
-        MemoryRegion* region = &memory_regions[region_type];
-        if (region->read_only) {
-            fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
+    MemoryRegion_t region_type = memory_get_region(address);
+    const MemoryRegion* region = &memory_regions[region_type];
+    if (region->read_only) {
+        fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
+        return false;
+    }
+    if (region->memory_mapped_io && region_type != REGION_COUNT) {
+        bool success = false;
+        switch (region_type)
+        {
+        case REGION_INPUT:
+            success = handle_input_write(address - INPUT_REG_START, data);
+            break;
+        case REGION_SOUND:
+            success = handle_sound_write(address - SOUND_REG_START, data);
+            break;
+        default:
+            printf("Write to memory-mapped I/O: 0x%04X\n", address);
+            break;
+        }
+        return success;
+    }
+    else {
+        if (address == MEMORY_SIZE - 1) {
+            fprintf(stderr, "Error: Attempt to write word to odd address.\n");
             return false;
         }
-        if (region->memory_mapped_io && region_type != REGION_COUNT) {
-            bool success = false;
-            switch (region_type)
-            {
-            case REGION_INPUT:
-                success = handle_input_write(address - INPUT_REG_START, data);
-                break;
-            case REGION_SOUND:
-                success = handle_sound_write(address - SOUND_REG_START, data);
-                break;
-            }
-            return success;
-        }
-        else {
-            if (address == MEMORY_SIZE - 1) {
-                fprintf(stderr, "Error: Attempt to write word to odd address.\n");
-                return false;
-            }
-            memory[address] = data | 0xFF00;
-            memory[address + 1] = data & 0x00FF;
-            return true;
-        }
-    } else {
-        fprintf(stderr, "Error: Address out of bounds.\n");
-        return false;
+        memory[address] = (uint8_t)(data >> 8);
+        memory[address + 1] = (uint8_t)(data & 0x00FF);
+        return true;
     }
 }
 
-MemoryRegion_t memory_get_region(uint8_t memory[], uint16_t address) {
+MemoryRegion_t memory_get_region(uint16_t address) {
     for (int i = 0; i < REGION_COUNT; i++) {
         if (address >= memory_regions[i].start_address && address <= memory_regions[i].end_address) {
             return (MemoryRegion_t) i;
@@ -311,16 +307,13 @@ MemoryRegion_t memory_get_region(uint8_t memory[], uint16_t address) {
     return REGION_COUNT; // Invalid region
 }
 
-void memory_dump(uint8_t memory[], uint16_t start, uint16_t length) {
-    for (int i = start; i < start + length; i++) {
-        if (i >= MEMORY_SIZE) {
-            printf("\nReached end of memory.");
-            break;
+void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint16_t chunk_size) {
+    for (int i = 0; i < length; i++) {
+        uint16_t addr = start_address + (i * chunk_size);
+        printf("\n0x%04X:", addr);
+        for (int j = 0; j < chunk_size; j++) {
+            printf(" %02X", memory[addr + (chunk_size - j - 1)]);
         }
-        if (i % 16 == 0) {
-            printf("\n%04X: ", i);
-        }
-        printf("%02X ", memory[i]);
     }
     printf("\n");
 }

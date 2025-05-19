@@ -1,5 +1,5 @@
-#include "include/cpu.h"
-#include "include/instructions.h"
+#include "cpu.h"
+#include "instructions.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -89,6 +89,9 @@ shared imm_decode(uint16_t instruction)
     {
     case 0x00:
         i.inst = LDI;
+        i.second = instruction & 0b11111111;
+        i.third = 0;
+        break;
         break;
     case 0x01:
         i.inst = LD;
@@ -100,7 +103,9 @@ shared imm_decode(uint16_t instruction)
         i.inst = ADDI;
         break;
     case 0x04:
-        i.inst = SUBI;
+        i.inst = LUI;
+        i.second = instruction & 0b11111111;
+        i.third = 0;
         break;
     case 0x05:
         i.inst = ANDI;
@@ -163,15 +168,19 @@ shared sp_decode(uint16_t instruction)
         break;
     case 0x02:
         i.inst = INC;
+        i.first = (instruction >> 8) & 0b111;
         break;
     case 0x03:
         i.inst = DEC;
+        i.first = (instruction >> 8) & 0b111;
         break;
     case 0x04:
         i.inst = PUSH;
+        i.first = (instruction >> 8) & 0b111;
         break;
     case 0x05:
         i.inst = POP;
+        i.first = (instruction >> 8) & 0b111;
         break;
     default:
         fprintf(stderr, "Error: Invalid Instruction Used.\n");
@@ -226,7 +235,7 @@ void execute_stage(shared i) {
             mov(i.first, i.second, &cpu);
             break;
         case CMP:
-            cmp(i.first, i.second, i.third, &cpu);
+            cmp(i.first, i.second, &cpu);
             break;
         case NOT:
             not(i.first, i.second, &cpu);
@@ -243,8 +252,8 @@ void execute_stage(shared i) {
         case ADDI:
             addi(i.first,i.second,i.third,&cpu);
             break;
-        case SUBI:
-            subi(i.first,i.second,i.third,&cpu);
+        case LUI:
+            lui(i.first, i.second, &cpu);
             break;
         case ANDI:
             andi(i.first,i.second,i.third,&cpu);
@@ -297,4 +306,5 @@ void execute_stage(shared i) {
         default:
             fprintf(stderr, "Error: Invalid Instruction Used.\n");
             break;
+    }
 }

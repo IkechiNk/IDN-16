@@ -1,4 +1,7 @@
-#include "include/memory.h"
+#ifndef IDN16_CPU_H
+#define IDN16_CPU_H
+
+#include "memory.h"
 
 typedef struct {
     uint16_t pc;
@@ -62,3 +65,5 @@ shared decode(uint16_t instruction);
  * Executes the decoded instruction.
  */
 void execute(shared info);
+
+#endif // IDN16_CPU_H

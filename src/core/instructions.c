@@ -1,14 +1,24 @@
-#include "include/instructions.h"
+#include "instructions.h"
 
-uint16_t sign_extend(uint16_t imm) {
-    if (imm & 0x00) {
-        return imm | 0xFFFF0000;
+uint16_t sign_extend_5(uint16_t imm) {
+    if (imm >> 4) {
+        return imm | 0xFFF0;
+    }
+    return imm;
+}
+
+uint16_t sign_extend_8(uint16_t imm) {
+    if (imm >> 7) {
+        return imm | 0xFF00;
     }
     return imm;
 }
 
 void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint32_t result32 = (uint32_t)cpu->r[rs1] + (uint32_t)cpu->r[rs2];
     uint16_t result = (uint16_t)result32;
     int16_t srs1 = (int16_t)cpu->r[rs1];
@@ -16,13 +26,16 @@ void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     int16_t sresult = (int16_t)result;
 
     cpu->flags.z = (result == 0);
-    cpu->flags.n = (result & 0x8000);
+    cpu->flags.n = (result & 0x8000) != 0;
     cpu->flags.c = result32 > 0xFFFF;
     cpu->flags.v = (srs1 > 0 && srs2 > 0 && sresult < 0) || (srs1 < 0 && srs2 < 0 && sresult > 0);
     cpu->r[rd] = result;
 }
 void sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint32_t result = cpu->r[rs1] - cpu->r[rs2];
     int16_t srs1 = (int16_t)cpu->r[rs1];
     int16_t srs2 = (int16_t)cpu->r[rs2];
@@ -35,7 +48,10 @@ void sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void and(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     uint16_t result = rs1_val & rs2_val;
@@ -45,7 +61,10 @@ void and(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void or(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     uint16_t result = rs1_val | rs2_val;
@@ -55,7 +74,10 @@ void or(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void xor(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     uint16_t result = rs1_val ^ rs2_val;
@@ -65,7 +87,10 @@ void xor(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void shl(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     uint16_t result = rs1_val << rs2_val;
@@ -80,7 +105,10 @@ void shl(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void shr(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     uint16_t result = rs1_val >> rs2_val;
@@ -95,7 +123,10 @@ void shr(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void sra(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     uint16_t result = rs1_val >> rs2_val;
@@ -114,10 +145,13 @@ void sra(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->r[rd] = result;
 }
 void mov(uint16_t rd, uint16_t rs1, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     cpu->r[rd] = cpu->r[rs1];
 }
-void cmp(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
+void cmp(uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t rs2_val = cpu->r[rs2];
     int16_t srs1 = (int16_t)rs1_val;
@@ -127,7 +161,10 @@ void cmp(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     cpu->flags.n = (srs1 < srs2);
 }
 void not(uint16_t rd, uint16_t rs1, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
     uint16_t result = ~rs1_val;
 
@@ -139,14 +176,20 @@ void not(uint16_t rd, uint16_t rs1, Cpu_T *cpu) {
 }
 
 void ldi(uint16_t rd, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
-    cpu->r[rd] = sign_extend(imm);
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
+    cpu->r[rd] = sign_extend_8(imm);
     cpu->flags.z = (cpu->r[rd] == 0);
     cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
 }
 void ld(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
-    uint16_t address = cpu->r[rs1] + sign_extend(imm);
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
+    uint16_t address = cpu->r[rs1] + sign_extend_5(imm);
     cpu->r[rd] = memory_read_word(cpu->memory, address);
     cpu->flags.z = (cpu->r[rd] == 0);
     cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
@@ -154,17 +197,18 @@ void ld(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
     cpu->flags.v = 0;
 }
 void st(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    uint16_t address = cpu->r[rs1] + sign_extend(imm);
+    uint16_t address = cpu->r[rs1] + sign_extend_5(imm);
     memory_write_word(cpu->memory, address, cpu->r[rd]);
-    cpu->flags.z = (cpu->r[rd] == 0);
-    cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
 }
 void addi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
-    uint32_t result32 = (uint32_t)cpu->r[rs1] + (uint32_t)sign_extend(imm);
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
+    uint32_t result32 = (uint32_t)cpu->r[rs1] + (uint32_t)((int16_t)sign_extend_5(imm));
     uint16_t result = (uint16_t)result32;
     int16_t srs1 = (int16_t)cpu->r[rs1];
-    int16_t simm = (int16_t)sign_extend(imm);
+    int16_t simm = (int16_t)sign_extend_5(imm);
     int16_t sresult = (int16_t)result;
 
     cpu->flags.z = (result == 0);
@@ -173,44 +217,37 @@ void addi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
     cpu->flags.v = (srs1 > 0 && simm > 0 && sresult < 0) || (srs1 < 0 && simm < 0 && sresult > 0);
     cpu->r[rd] = result;
 }
-void subi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
-    uint32_t result = cpu->r[rs1] - sign_extend(imm);
-    int16_t srs1 = (int16_t)cpu->r[rs1];
-    int16_t simm = (int16_t)sign_extend(imm);
-    int16_t sresult = (int16_t)result;
-
-    cpu->flags.z = (result == 0);
-    cpu->flags.n = (result & 0x8000) != 0;
-    cpu->flags.c = (cpu->r[rs1] >= sign_extend(imm));
-    cpu->flags.v = (srs1 < 0 && simm > 0 && sresult > 0) || (srs1 > 0 && simm < 0 && sresult < 0);
-    cpu->r[rd] = result;
-}
 void andi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
-    uint16_t imm_val = sign_extend(imm);
-    uint16_t result = rs1_val & imm_val;
+    uint16_t result = rs1_val & imm;
 
     cpu->flags.z = (result == 0);
     cpu->flags.n = (result & 0x8000) != 0;
     cpu->r[rd] = result;
 }
 void ori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
-    uint16_t imm_val = sign_extend(imm);
-    uint16_t result = rs1_val | imm_val;
+    uint16_t result = rs1_val | imm;
 
     cpu->flags.z = (result == 0);
     cpu->flags.n = (result & 0x8000) != 0;
     cpu->r[rd] = result;
 }
 void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
     uint16_t rs1_val = cpu->r[rs1];
-    uint16_t imm_val = sign_extend(imm);
-    uint16_t result = rs1_val ^ imm_val;
+    uint16_t result = rs1_val ^ imm;
 
     cpu->flags.z = (result == 0);
     cpu->flags.n = (result & 0x8000) != 0;
@@ -218,27 +255,27 @@ void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
 }
 
 void jmp(uint16_t imm, Cpu_T *cpu) {
-    cpu->pc += sign_extend(imm);
+    cpu->pc += sign_extend_8(imm);
     cpu->flags.z = (cpu->pc == 0);
 }
 void jeq(uint16_t imm, Cpu_T *cpu) {
     if (cpu->flags.z) {
-        cpu->pc += sign_extend(imm);
+        cpu->pc += sign_extend_8(imm);
     }
 }
 void jne(uint16_t imm, Cpu_T *cpu) {
     if (!cpu->flags.z) {
-        cpu->pc += sign_extend(imm);
+        cpu->pc += sign_extend_8(imm);
     }
 }
 void jgt(uint16_t imm, Cpu_T *cpu) {
     if (!cpu->flags.z && !cpu->flags.n) {
-        cpu->pc += sign_extend(imm);
+        cpu->pc += sign_extend_8(imm);
     }
 }
 void jlt(uint16_t imm, Cpu_T *cpu) {
     if (cpu->flags.n && !cpu->flags.z) {
-        cpu->pc += sign_extend(imm);
+        cpu->pc += sign_extend_8(imm);
     }
 }
 void jsr(uint16_t imm, Cpu_T *cpu) {
@@ -246,7 +283,6 @@ void jsr(uint16_t imm, Cpu_T *cpu) {
 }
 void ret(Cpu_T *cpu) {
     cpu->pc = cpu->r[7];
-    
 }
 
 void hlt(Cpu_T *cpu) {
@@ -270,22 +306,30 @@ void dec(uint16_t rd, Cpu_T *cpu) {
     addi(rd, rd, -1, cpu);
 }
 void push(uint16_t rd, Cpu_T *cpu) {
-    dec(6, cpu);
-    dec(6, cpu);
     memory_write_word(cpu->memory, cpu->r[6], cpu->r[rd]);
+    dec(6, cpu);
+    dec(6, cpu);
     cpu->flags.z = (cpu->r[rd] == 0);
     cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
 }
 void pop(uint16_t rd, Cpu_T *cpu) {
-    if (rd == 0) return;
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
+    inc(6, cpu);
+    inc(6, cpu);
     cpu->r[rd] = memory_read_word(cpu->memory, cpu->r[6]);
-    inc(6, cpu);
-    inc(6, cpu);
     cpu->flags.z = (cpu->r[rd] == 0);
     cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
 }
 void lui(uint16_t rd, uint16_t imm, Cpu_T *cpu) {
-    uint16_t result = (cpu->r[rd] & 0x0000FFFF) | (sign_extend(imm) << 16);
+    if (rd == 0) {
+        cpu->r[0] = 0;
+        return;   
+    }
+    uint16_t upper = (sign_extend_8(imm)) << 8;
+    uint16_t result = upper | (cpu->r[rd] & 0x00FF);
     cpu->flags.z = (result == 0);
     cpu->flags.n = (result & 0x8000) != 0;
     cpu->flags.c = 0;

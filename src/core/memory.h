@@ -1,3 +1,6 @@
+#ifndef IDN16_MEMORY_H
+#define IDN16_MEMORY_H
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -46,7 +49,8 @@ typedef enum {
     REGION_PALETTE,
     REGION_SOUND,
     REGION_INPUT,
-    REGION_SYSTEM,
+    REGION_SYSTEM_CTRL,
+    REGION_SYSTEM_ROM,
     REGION_COUNT // Enum defines automatically
 } MemoryRegion_t;
 
@@ -75,17 +79,68 @@ typedef struct {
     uint8_t audio_control;
 } SoundSystem;
 
-/* Initializes memory with default values of 0. */
+/* 
+ * Initializes memory with default values of 0. 
+    * @param memory The memory array to initialize.
+ */
 void memory_init(uint8_t memory[]); 
-/* Reads a byte from memory.*/
+
+/* 
+ * Reads a byte from memory.
+    * @param memory The memory array to read from.
+    * @param address The address to read from.
+    * @return The byte read from memory.
+ */
 uint8_t memory_read_byte(uint8_t memory[], uint16_t address);
-/* Reads a word from memory.*/
+
+/* 
+ * Reads a word from memory.
+    * @param memory The memory array to read from.
+    * @param address The address to read from.
+    * @return The word read from memory.
+ */
 uint16_t memory_read_word(uint8_t memory[], uint16_t address);
-/* Writes given byte to memory address. Returns success of operation. */
+
+/* 
+ * Writes given byte to memory address. Returns success of operation.
+    * @param memory The memory array to write to.
+    * @param address The address to write to.
+    * @param data The byte to write.
+    * @return true if the write was successful, false otherwise.
+ */
 bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data);
-/* Writes given word to memory address. Returns success of operation. */
+
+/* 
+ * Writes given word to memory address. Returns success of operation.
+    * @param memory The memory array to write to.
+    * @param address The address to write to.
+    * @param data The word to write.
+    * @return true if the write was successful, false otherwise.
+ */
 bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data);
-/* Returns the region type of the given address. */ 
-MemoryRegion_t memory_get_region(uint8_t memory[], uint16_t address);
-/* Dumps words stored in memory from address start to stdout.*/
-void memory_dump(uint8_t memory[], uint16_t start, uint16_t length);
+
+/* 
+ * Returns the region type of the given address. 
+    * @param address The address to check.
+    * @return The memory region type.
+ */ 
+MemoryRegion_t memory_get_region(uint16_t address);
+
+/* 
+ * Dumps contents stored in memory addresses.
+    * @param memory The memory array to dump.
+    * @param start_address The starting address to dump from.
+    * @param length The number of byte sized chunks to dump.
+    * @note This function is used for debugging purposes.
+ */
+void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint16_t chunk_size);
+
+// Function prototypes for testing purposes
+void initialize_rom(uint8_t memory[]);
+void load_startup(void);
+void initialize_palettes(uint8_t memory[]);
+bool handle_input_write(uint16_t offset, uint8_t value);
+bool handle_sound_write(uint16_t offset, uint8_t value);
+uint8_t handle_input_read(uint16_t offset);
+uint8_t handle_sound_read(uint16_t offset);
+#endif // IDN16_MEMORY_H

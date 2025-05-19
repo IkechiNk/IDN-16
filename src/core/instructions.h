@@ -1,44 +1,46 @@
-#include "include/cpu.h"
+#ifndef IDN16_INSTRUCTIONS_H
+#define IDN16_INSTRUCTIONS_H
+
+#include "cpu.h"
 // REG-format
-#define ADD 0
-#define SUB 1
-#define AND 2
-#define OR  3
-#define XOR 4
-#define SHL 5
-#define SHR 6
-#define SRA 7
-#define MOV 8
-#define CMP 9
-#define NOT 10
+#define ADD   0
+#define SUB   1
+#define AND   2
+#define OR    3
+#define XOR   4
+#define SHL   5
+#define SHR   6
+#define SRA   7
+#define MOV   8
+#define CMP   9
+#define NOT  10
 
 // IMM-format
-#define LDI 11
-#define LD  12
-#define ST  13
+#define LDI  11
+#define LD   12
+#define ST   13
 #define ADDI 14
-#define SUBI 15
+#define LUI  15
 #define ANDI 16
-#define ORI 17
+#define ORI  17
 #define XORI 18
 
 // J-format
-#define JMP 19
-#define JEQ 20
-#define JNE 21
-#define JGT 22
-#define JLT 23
-#define JSR 24
-#define RET 25
+#define JMP  19
+#define JEQ  20
+#define JNE  21
+#define JGT  22
+#define JLT  23
+#define JSR  24
+#define RET  25
 
 // SP-format
-#define HLT 26
-#define NOP 27
-#define	INC 28
-#define	DEC 29
+#define HLT  26
+#define NOP  27
+#define	INC  28
+#define	DEC  29
 #define	PUSH 30
-#define	POP 31
-#define LUI 32
+#define	POP  31
 
 void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
 void sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
@@ -49,7 +51,7 @@ void shl(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
 void shr(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
 void sra(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
 void mov(uint16_t rd, uint16_t rs1, Cpu_T *cpu);
-void cmp(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
+void cmp(uint16_t rs1, uint16_t rs2, Cpu_T *cpu);
 void not(uint16_t rd, uint16_t rs1, Cpu_T *cpu);
 void ldi(uint16_t rd, uint16_t imm, Cpu_T *cpu);
 void ld(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu);
@@ -74,3 +76,5 @@ void dec(uint16_t rd, Cpu_T *cpu);
 void push(uint16_t rd, Cpu_T *cpu);
 void pop(uint16_t rd, Cpu_T *cpu);
 void lui(uint16_t rd, uint16_t imm, Cpu_T *cpu);
+
+#endif // IDN16_INSTRUCTIONS_H
