@@ -2,13 +2,16 @@
 
 ## Table of Contents
 
-
 - [`IDN-16` Console](#idn-16-console)
   - [Table of Contents](#table-of-contents)
   - [About](#about)
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installing](#installing)
+  - [Tools](#tools)
+    - [Assembler](#assembler)
+    - [Disassembler](#disassembler)
+    - [Example Programs](#example-programs)
   - [Documentation](#documentation)
     - [Memory Mapping](#memory-mapping)
     - [IO-Interfacing](#io-interfacing)
@@ -29,10 +32,12 @@
       - [Syntax Overview](#syntax-overview)
       - [Addressing Modes](#addressing-modes)
       - [Psuedo-Instructions](#psuedo-instructions)
+  - [Development](#development)
+    - [Testing](#testing)
 
 ## About
 
-`IDN-16` is a 16-bit, simulated console featuring a custom CPU architecture, memory-mapped I/O, and a risc-v inspited custom instruction set. This serves as a way for me to solidify what I learned about low-level computer architecture, emulation techniques, and graphics programming, while creating something that I find fun and creatively satisfying.
+`IDN-16` is a 16-bit, simulated console featuring a custom CPU architecture, memory-mapped I/O, and a RISC-V inspired custom instruction set. This serves as a way for me to solidify what I learned about low-level computer architecture, emulation techniques, and graphics programming, while creating something that I find fun and creatively satisfying.
 
 ## Getting Started
 
@@ -44,7 +49,7 @@ You will need the following software installed:
 
 - `GCC` or `Clang` (C compiler)
 - `Make`
-- `SDL2` development libraries (for input handling)
+- `SDL2` development libraries (for graphics, input handling, and sound)
 - `Git` (to clone the repository)
 
 For Ubuntu/Debian, these can be installed by running the following:
@@ -57,17 +62,113 @@ sudo apt install build-essential libsdl2-dev git
 
 **Clone the repository**
 ```
-git clone https://github.com/yourusername/`IDN-16`.git cd `IDN-16`
+git clone https://github.com/yourusername/IDN-16.git
+cd IDN-16
 ```
-**Build the project**
+**Building the project**
 ```
-make
+make all
 ```
- **Prepare a ROM file**
+
+This will build the core emulator, assembler, disassembler, and run the tests. To build specific components:
+
+```
+make core        # Build just the emulator
+make assembler   # Build just the assembler
+make disassembler # Build just the disassembler
+```
+**Prepare a ROM file**
 Place your compiled ROM as `rom.bin` in the project root directory. The emulator loads this file at startup.
 **Run the emulator**
 ```
 ./idn16
+```
+
+## Tools
+
+### Assembler
+
+The IDN-16 toolchain includes a custom assembler that compiles assembly language programs into binary machine code for the IDN-16 console.
+
+**Building the assembler:**
+```
+make assembler
+```
+
+**Usage:**
+```
+./asmblr input.asm output.bin
+```
+
+Where:
+- `input.asm` is your assembly source file
+- `output.bin` is the binary output file that can be loaded into the emulator
+- `listing.lst` (optional) is a listing file that shows the address, binary encoding, and source code for each instruction
+
+The assembler is a two-pass system that:
+1. First pass: Collects all labels and their addresses
+2. Second pass: Generates binary code with resolved label references
+
+### Disassembler
+
+A disassembler is provided to convert binary machine code back to readable assembly language.
+
+**Building the disassembler:**
+```
+make disassembler
+```
+
+**Usage:**
+```
+./dasmblr input.bin [start_address]
+```
+
+Where:
+- `input.bin` is the binary file containing IDN-16 machine code
+- `start_address` (optional, in hexadecimal) is the starting address for the disassembly listing
+
+The disassembler will generate output showing the address, and assembly instruction for each 16-bit word in the file:
+
+```
+Address: Instruction
+------------------------
+0000:  LDI  r0, 5
+0002:  LDI  r1, 1
+0004:  CMP  r0, 0
+0006:  JEQ  16
+...
+```
+
+### Example Programs
+
+Here's a simple factorial program to demonstrate the assembly language:
+
+```assembly
+; Calculate factorial of 5
+start:
+    LDI  r0, 5        ; Calculate factorial of 5
+    LDI  r1, 1        ; Initialize result to 1
+    
+factorial_loop:
+    CMP  r0, 0        ; Check if counter is zero
+    JEQ  done         ; If zero, we're done
+    
+    MOV  r2, r1       ; Copy current result to r2
+    MOV  r3, r0       ; Copy counter to r3
+    
+multiply_loop:
+    ADDI r3, r3, -1   ; Decrement multiply counter
+    JEQ  multiply_done ; If zero, multiplication is done
+    ADD  r1, r1, r2   ; Add r2 to result
+    JMP  multiply_loop
+    
+multiply_done:
+    ADDI r0, r0, -1   ; Decrement factorial counter
+    JMP  factorial_loop
+    
+done:
+    ST   r1, [r7+0]   ; Store result at address in r7
+    HLT              ; Halt execution
 ```
 
 ## Documentation
@@ -86,7 +187,7 @@ The `IDN-16` has a 64KB byte-addressable memory space sectioned into several ded
 0xF000-0xFFFF: System ROM (4KB for built-in functions)
 ```
 ### IO-Interfacing
-The IK-16 uses memory-mapped I/O for interfacing with specific I/O:
+The IDN-16 uses memory-mapped I/O for interfacing with specific I/O:
 
 #### Input System (0x7000-0x70FF)
 **0x7000**: Controller 1 button state (read-only)
@@ -217,5 +318,23 @@ routine:
 The assembler has support for some pseudo-instructions:
 - **NOP** → Expands to **MOV** r0, r0
 - **CALL** addr → Expands to **JSR** addr
+
+## Development
+
+### Testing
+
+The project includes comprehensive test suites for both the CPU and memory subsystems. These tests verify the correct behavior of each instruction and memory operation.
+
+**Running the tests:**
+```
+make test
+```
+
+The test suite uses Unity as the testing framework and validates:
+- All CPU instructions (ADD, SUB, LDI, etc.)
+- Memory read/write operations
+- Memory-mapped I/O behavior
+- Edge cases like register r0 operations, overflow conditions
+
 ---
 This documentation will be expanded as development continues.
