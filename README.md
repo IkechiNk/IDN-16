@@ -157,7 +157,7 @@ All instructions are 16 bits wide:
 | 00110   | SHR rd, rs1, rs2 (func=00)            | Shift right logical             |
 | 00110   | SRA rd, rs1, rs2 (func=01)            | Shift right arithmetic          |
 | 00111   | MOV rd, rs1 (func=00)                 | Copy register                   |
-| 00111   | CMP rd, rs1, rs2 (func=01)            | Compare regs and set flags      |
+| 00111   | CMP rd, rs2 (func=01)                 | Compare regs and set flags      |
 | 00111   | NOT rd, rs1 (func=10)                 | Bitwise NOT                     |
 
 #### IMM-Format Instructions

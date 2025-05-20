@@ -14,6 +14,13 @@ uint16_t sign_extend_8(uint16_t imm) {
     return imm;
 }
 
+uint16_t sign_extend_11(uint16_t imm) {
+    if (imm >> 10) {
+        return imm | 0xF800;
+    }
+    return imm;
+}
+
 void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_T *cpu) {
     if (rd == 0) {
         cpu->r[0] = 0;
@@ -255,27 +262,27 @@ void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_T *cpu) {
 }
 
 void jmp(uint16_t imm, Cpu_T *cpu) {
-    cpu->pc += sign_extend_8(imm);
+    cpu->pc += sign_extend_11(imm);
     cpu->flags.z = (cpu->pc == 0);
 }
 void jeq(uint16_t imm, Cpu_T *cpu) {
     if (cpu->flags.z) {
-        cpu->pc += sign_extend_8(imm);
+        cpu->pc += sign_extend_11(imm);
     }
 }
 void jne(uint16_t imm, Cpu_T *cpu) {
     if (!cpu->flags.z) {
-        cpu->pc += sign_extend_8(imm);
+        cpu->pc += sign_extend_11(imm);
     }
 }
 void jgt(uint16_t imm, Cpu_T *cpu) {
     if (!cpu->flags.z && !cpu->flags.n) {
-        cpu->pc += sign_extend_8(imm);
+        cpu->pc += sign_extend_11(imm);
     }
 }
 void jlt(uint16_t imm, Cpu_T *cpu) {
     if (cpu->flags.n && !cpu->flags.z) {
-        cpu->pc += sign_extend_8(imm);
+        cpu->pc += sign_extend_11(imm);
     }
 }
 void jsr(uint16_t imm, Cpu_T *cpu) {
