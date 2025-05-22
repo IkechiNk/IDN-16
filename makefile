@@ -1,47 +1,71 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -Wshadow -Wformat=2 -fsanitize=address,undefined -Iinclude -Isrc
+CC	  = gcc
+CFLAGS  = -Wall -Wextra -Wshadow -Wformat=2 -Wno-unused-function -Iinclude -Isrc
+LFLAGS  = -Wno-error=implicit-function-declaration -Wno-error=unused-function -Wno-error=unused-function 
+DEVFLAGS= -Wall -Wextra -Wshadow -Wformat=2 -fsanitize=address,undefined -Iinclude -Isrc
 
-# Core emulator
-CORE_SRC = src/core/cpu.c src/core/memory.c src/core/decoder.c src/core/instructions.c
+# --- Core Emulator ---
+CORE_SRC = src/core/runner.c src/core/cpu.c src/core/memory.c src/core/instructions.c src/core/IO/display.c
 CORE_BIN = idn16
 
-# Tools
-ASM_SRC = src/tools/assembler.c src/tools/lexer.c src/tools/parser.c src/tools/codegen.c src/tools/symbols.c src/core/instructions.c src/core/memory.c
-ASM_OBJS = $(ASM_SRC:.c=.o)
-ASM_BIN = asmblr
+# --- Disassembler ---
 DASM_SRC = src/tools/disassembler.c
-DASM_OBJS = $(DASM_SRC:.c=.o)
-DASM_BIN = dasmblr
+DASM_INC = src/tools/dasm.c src/tools/dasm.h
+DASM_BIN = dasm
 
-# Tests
-UNITY_SRC = src/tests/Unity/unity.c
-TEST_MEM_SRC = src/tests/test_memory.c
+# --- Assembler (Flex/Bison) ---
+LEX	= flex
+YACC = bison
+PARSER   = src/tools/assembler/parser.y
+PARSER_TABH = src/tools/assembler/parser.tab.h
+PARSER_TABC = src/tools/assembler/parser.tab.c
+LEXER = src/tools/assembler/lexer.l
+LEXYY = src/tools/assembler/lex.yy.c
+ASM_BIN  = asm
+
+ASM_SRC  = src/tools/assembler/asm_main.c \
+		   src/tools/assembler/codegen.c \
+		   src/tools/assembler/symbol_table.c
+
+# --- Unit Tests ---
+TEST_MEM_SRC = test/test_memory.c
+TEST_CPU_SRC = test/test_cpu.c
+UNITY_SRC	= test/unity.c
 TEST_MEM_BIN = test_memory
-TEST_CPU_SRC = src/tests/test_cpu.c
 TEST_CPU_BIN = test_cpu
 
-.PHONY: all core assembler test run_test_memory run_test_cpu clean
+.PHONY: all core asmblr asm disasm test run_test_memory run_test_cpu clean
 
-all: core assembler test
+all: core test asmblr
 
+# --- Core Emulator ---
 core: $(CORE_BIN)
 
-$(CORE_BIN): $(CORE_SRC)
-	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
+$(CORE_BIN): $(CORE_SRC) $(DASM_INC)
+	$(CC) $(CFLAGS) -o $@ $^ -lSDL2 -lSDL2_ttf
 
-assembler: $(ASM_BIN)
+# --- Assembler ---
+asmblr: $(ASM_BIN)
 
-$(ASM_BIN): $(ASM_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
+$(PARSER_TABC) $(PARSER_TABH): $(PARSER)
+	$(YACC) -Wcex -d -o $(PARSER_TABC) $(PARSER)
 
-disassembler: $(DASM_BIN)
+$(LEXYY): $(LEXER) $(PARSER_TABH)
+	$(LEX) -o $(LEXYY) $(LEXER)
 
-$(DASM_BIN): $(DASM_OBJS)
+$(ASM_BIN): $(LEXYY) $(PARSER_TABC) $(PARSER_TABH) $(ASM_SRC)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LEXYY) $(PARSER_TABC) $(ASM_SRC) -lfl
+
+# --- Disassembler ---
+disasmblr: $(DASM_BIN)
+
+$(DASM_BIN): $(DASM_SRC) $(DASM_INC)
 	$(CC) $(CFLAGS) -o $@ $^
 
+# --- Object file rule for tools (optional, for future use) ---
 src/tools/%.o: src/tools/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# --- Unit Tests ---
 test: run_test_memory run_test_cpu
 
 run_test_memory: $(TEST_MEM_BIN)
@@ -56,5 +80,8 @@ $(TEST_MEM_BIN): $(TEST_MEM_SRC) $(UNITY_SRC) src/core/memory.c src/core/instruc
 $(TEST_CPU_BIN): $(TEST_CPU_SRC) $(UNITY_SRC) src/core/cpu.c src/core/memory.c src/core/instructions.c
 	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
 
+# --- Clean ---
 clean:
-	rm -f $(CORE_BIN) $(ASM_BIN) $(TEST_MEM_BIN) $(TEST_CPU_BIN) src/core/*.o src/tools/*.o *.bin
+	rm -f $(CORE_BIN) $(ASM_BIN) $(DASM_BIN) $(TEST_MEM_BIN) $(TEST_CPU_BIN)
+	rm -f src/core/*.o src/tools/*.o src/tools/assembler/*.o
+	rm -f src/tools/assembler/lex.yy.c src/tools/assembler/parser.tab.* *.o *.bin

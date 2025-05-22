@@ -58,7 +58,6 @@ void test_handle_input_read_default(void) {
 }
 
 void test_handle_sound_read_invalid_channel(void) {
-    // Should return 0 for invalid channel
     TEST_ASSERT_EQUAL_UINT8(0, handle_sound_read(0x100));
 }
 

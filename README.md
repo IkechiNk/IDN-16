@@ -15,9 +15,9 @@
   - [Documentation](#documentation)
     - [Memory Mapping](#memory-mapping)
     - [IO-Interfacing](#io-interfacing)
-      - [Input System (0x7000-0x70FF)](#input-system-0x7000-0x70ff)
-      - [Sound System (0x6000-0x60FF)](#sound-system-0x6000-0x60ff)
-      - [System Control (0x8000-0x80FF)](#system-control-0x8000-0x80ff)
+      - [Sound System (0x5100-0x51FF)](#sound-system-0x5100-0x51ff)
+      - [Input System (0x5200-0x52ff)](#input-system-0x5200-0x52ff)
+      - [System Control (0x5300-0x53FF)](#system-control-0x5300-0x53ff)
     - [CPU Architecture](#cpu-architecture)
       - [Registers](#registers)
       - [Status Flags](#status-flags)
@@ -27,7 +27,7 @@
       - [REG-Format Instructions](#reg-format-instructions)
       - [IMM-Format Instructions](#imm-format-instructions)
       - [JB-Format Instructions](#jb-format-instructions)
-      - [SP-Format Instructions](#sp-format-instructions)
+      - [SP-Format (and extra) Instructions](#sp-format-and-extra-instructions)
     - [Assembly Language](#assembly-language)
       - [Syntax Overview](#syntax-overview)
       - [Addressing Modes](#addressing-modes)
@@ -181,16 +181,23 @@ The `IDN-16` has a 64KB byte-addressable memory space sectioned into several ded
 0x4000-0x47FF: Video memory (2KB for display buffer)
 0x4800-0x4FFF: Sprite data (2KB for sprite definitions)
 0x5000-0x50FF: Palette data (256 bytes for color definitions)
-0x6000-0x60FF: Sound registers (256 bytes)
-0x7000-0x70FF: Input registers (256 bytes)
-0x8000-0x80FF: System control (256 bytes for interrupts, timers)
-0xF000-0xFFFF: System ROM (4KB for built-in functions)
+0x5100-0x51FF: Sound registers (256 bytes)
+0x5200-0x52ff: Input registers (256 bytes)
+0x5300-0x53FF: System control (256 bytes for interrupts, timers)
+0x5400-0x63FF: System ROM (4KB for built-in functions)
 ```
 ### IO-Interfacing
 The IDN-16 uses memory-mapped I/O for interfacing with specific I/O:
 
-#### Input System (0x7000-0x70FF)
-**0x7000**: Controller 1 button state (read-only)
+#### Sound System (0x5100-0x51FF)
+For each channel N (0-3), starting at 0x6000 + N*16:
+- **0x6N00**: Frequency low byte (read/write)
+- **0x6N01**: Frequency high byte (read/write)
+- **0x6N02**: Volume (read/write)
+- **0x6N03**: Waveform select (read/write)
+ 
+#### Input System (0x5200-0x52ff)
+**0x5200**: Controller 1 button state (read-only)
 - Bit 0: A button
 - Bit 1: B button
 - Bit 2: Start
@@ -200,18 +207,13 @@ The IDN-16 uses memory-mapped I/O for interfacing with specific I/O:
 - Bit 6: Left
 - Bit 7: Right
 
-**0x7001**: Controller 2 button state (read-only)
+**0x5201**: Controller 2 button state (read-only)
 
-#### Sound System (0x6000-0x60FF)
-For each channel N (0-3), starting at 0x6000 + N*16:
-- **0x6N00**: Frequency low byte (read/write)
-- **0x6N01**: Frequency high byte (read/write)
-- **0x6N02**: Volume (read/write)
-- **0x6N03**: Waveform select (read/write)
 
-#### System Control (0x8000-0x80FF)
-- **0x8000**: System status register
-- **0x8001**: Interrupt control register
+
+#### System Control (0x5300-0x53FF)
+- **0x5300**: System status register
+- **0x5301**: Interrupt control register
 
 ### CPU Architecture
 #### Registers
@@ -258,7 +260,7 @@ All instructions are 16 bits wide:
 | 00110   | SHR rd, rs1, rs2 (func=00)            | Shift right logical             |
 | 00110   | SRA rd, rs1, rs2 (func=01)            | Shift right arithmetic          |
 | 00111   | MOV rd, rs1 (func=00)                 | Copy register                   |
-| 00111   | CMP rd, rs2 (func=01)                 | Compare regs and set flags      |
+| 00111   | CMP rd, rs1 (func=01)                 | Compare regs and set flags      |
 | 00111   | NOT rd, rs1 (func=10)                 | Bitwise NOT                     |
 
 #### IMM-Format Instructions
@@ -266,8 +268,8 @@ All instructions are 16 bits wide:
 | Opcode  | Assembly Syntax                       | Usage                           |
 | ------- | ------------------------------------- | ------------------------------- |
 | 01000   | LDI rd, imm (8 bits)                  | Load immediate (MSB Extends)    |
-| 01001   | LD rd, [rs1+imm]                      | Load word from memory           |
-| 01010   | ST rd, [rs1+imm]                      | Store word to memory            |
+| 01001   | LDW rd, [rs1+imm]                     | Load word from memory           |
+| 01010   | STW rd, [rs1+imm]                     | Store word to memory            |
 | 01011   | ADDI rd, rs1, imm                     | Add immediate (MSB Extends)     |
 | 01100   | LUI rd, imm (8 bits)                  | Load immediate to upper 8 bits  |
 | 01101   | ANDI rd, rs1, imm                     | AND immediate                   |
@@ -286,7 +288,7 @@ All instructions are 16 bits wide:
 | 10101   | JSR offset                            | Jump to subroutine              |
 | 10110   | RET                                   | Return from subroutine          |
 
-#### SP-Format Instructions
+#### SP-Format (and extra) Instructions
 
 | Opcode  | Assembly Syntax                       | Usage                           |
 | ------- | ------------------------------------- | ------------------------------- |
@@ -296,18 +298,19 @@ All instructions are 16 bits wide:
 | 11011   | DEC rd                                | Decrement register              |
 | 11100   | PUSH rd                               | Push register to stack          |
 | 11101   | POP rd                                | Pop from stack to register      |
-
+| 11110   | LDB rd, [rs1+imm]                     | Load byte from memory           |
+| 11111   | STB rd, [rs1+imm]                     | Store byte to memory            |
 ### Assembly Language
 #### Syntax Overview
 ```
 ; This is a comment
 label:          ; Define a label
-  LDI  r0, 10   ; Load immediate value 10 into r0
+  LDI  sp, 10   ; Load immediate value 10 into r6
   JSR  routine  ; Jump to subroutine "routine"
   HLT           ; Halt execution
 
 routine:
-  MOV  r1, r0   ; Copy r0 to r1
+  MOV  r1, sp   ; Copy r6 to r1
   RET           ; Return from subroutine
 ```
 #### Addressing Modes
@@ -315,9 +318,11 @@ routine:
 - **Register:** MOV r0, r1
 - **Register Indirect with Offset:** LD r0, [r1+2]
 #### Psuedo-Instructions
-The assembler has support for some pseudo-instructions:
-- **NOP** → Expands to **MOV** r0, r0
-- **CALL** addr → Expands to **JSR** addr
+The assembler has support for pseudo-instructions:
+- **CALL** addr -> Expands to **JSR** addr
+- **INC** addr -> Expands to **ADDI** addr addr 1
+- **DEC** addr -> Expands to **ADDI** addr addr 1
+
 
 ## Development
 

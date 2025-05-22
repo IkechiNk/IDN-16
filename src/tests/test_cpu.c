@@ -2,7 +2,7 @@
 #include "../core/cpu.h"
 #include "../core/instructions.h"
 
-static Cpu_T* cpu;
+static Cpu_t* cpu;
 
 void setUp(void) {
     cpu = cpu_init();

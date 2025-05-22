@@ -1,6 +1,10 @@
 #ifndef IDN16_CPU_H
 #define IDN16_CPU_H
 
+#define CPU_CLOCK_HZ 8000000  // 8 MHz CPU
+#define DISPLAY_REFRESH_HZ 60 // 60 FPS
+#define CYCLES_PER_FRAME (CPU_CLOCK_HZ / DISPLAY_REFRESH_HZ)
+
 #include "memory.h"
 
 typedef struct {
@@ -27,17 +31,21 @@ typedef struct {
     } flags;
 
     // Cycle counter for CPU timing
-    uint32_t cycles;
+    uint64_t cycles;
 
+    // Interrupt handling
+    bool interrupt_pending;
+    uint8_t interrupt_type;
+    
     // CPU state
     bool running; 
-} Cpu_T;
+} Cpu_t;
 
 /* Shared between CPU stages */
 typedef struct
 {
   uint16_t inst;
-  uint8_t first;
+  uint16_t first;
   uint8_t second;
   uint8_t third;
 } shared;
@@ -46,13 +54,19 @@ typedef struct
  * Initializes the CPU.
  * Returns a pointer to the CPU struct.
  */
-Cpu_T* cpu_init(void);
+Cpu_t* cpu_init(void);
+
+/*
+ * Destroys the CPU.
+ * Frees the allocated memory pointed to by cpu.
+ */
+void cpu_destroy(Cpu_t* cpu);
 
 /*
  * Returns the current instruction according to the
  * cpu's program counter.
  */
-uint16_t fetch();
+uint16_t fetch(Cpu_t* cpu);
 
 /*
  * Returns the results of the decode stage.
@@ -64,6 +78,6 @@ shared decode(uint16_t instruction);
 /*
  * Executes the decoded instruction.
  */
-void execute(shared info);
+void execute(shared info, Cpu_t* cpu);
 
 #endif // IDN16_CPU_H

@@ -130,14 +130,15 @@ MemoryRegion_t memory_get_region(uint16_t address);
  * Dumps contents stored in memory addresses.
     * @param memory The memory array to dump.
     * @param start_address The starting address to dump from.
-    * @param length The number of byte sized chunks to dump.
+    * @param length The number of address lines to dump.
+    * @param chunk_size The number of bytes per address line
     * @note This function is used for debugging purposes.
  */
 void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint16_t chunk_size);
 
 // Function prototypes for testing purposes
 void initialize_rom(uint8_t memory[]);
-void load_startup(void);
+void load_startup(uint8_t memory[]);
 void initialize_palettes(uint8_t memory[]);
 bool handle_input_write(uint16_t offset, uint8_t value);
 bool handle_sound_write(uint16_t offset, uint8_t value);
