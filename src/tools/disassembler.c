@@ -6,8 +6,8 @@
 #define MAX_BYTES 65536  // Maximum file size (64KB)
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input.bin>\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <input.bin> <output.asm>\n", argv[0]);
         return 1;
     }
 
@@ -46,21 +46,29 @@ int main(int argc, char *argv[]) {
 
     fclose(file);
 
+    // Open output file
+    FILE *output_file = fopen(argv[2], "w");
+    if (!output_file) {
+        perror("Error opening output file");
+        free(buffer);
+        return 1;
+    }
 
-    // Print header
-    printf("Address: Instruction\n");
-    printf("------------------------\n");
+    // Write header
+    fprintf(output_file, "Instruction\n");
+    fprintf(output_file, "------------------------\n");
 
     // Disassemble each 16-bit word
     for (long i = 0; i < file_size; i += 2) {
         if (i + 1 < file_size) {
             uint16_t word = read_word(buffer, i);
-            printf("%s", disassemble_word(word));
+            fprintf(output_file, "%s", disassemble_word(word));
         } else {
-            printf("Incomplete word found at %d: %02X\n", (int)i, buffer[i]);
+            fprintf(output_file, "Incomplete word found at %d: %02X\n", (int)i, buffer[i]);
         }
     }
 
+    fclose(output_file);
     free(buffer);
     return 0;
 }

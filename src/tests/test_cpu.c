@@ -200,10 +200,10 @@ void test_LD_and_ST(void) {
     ld(3, 2, 0x0F, cpu);
     TEST_ASSERT_EQUAL_UINT16(0xABCD, cpu->r[3]);
     // // Edge: ld to r0 (should not change r0)
-    // cpu->r[2] = 0x1234;
-    // st(2, 1, 0x00, cpu);
-    // ld(0, 1, 0x00, cpu);
-    // TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
+    cpu->r[2] = 0x1234;
+    st(2, 1, 0x00, cpu);
+    ld(0, 1, 0x00, cpu);
+    TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
 }
 
 void test_ADDI(void) {
@@ -307,11 +307,10 @@ void test_JLT(void) {
 
 void test_JSR_and_RET(void) {
     cpu->pc = 0x1000;
-    cpu->r[7] = 0x1234;
     jsr(0x10, cpu);
     TEST_ASSERT_EQUAL_UINT16(0x1010, cpu->pc);
     ret(cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1234, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
 }
 
 void test_HLT_and_NOP(void) {

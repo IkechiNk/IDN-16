@@ -1,10 +1,10 @@
-CC	  = gcc
+CC      = gcc
 CFLAGS  = -Wall -Wextra -Wshadow -Wformat=2 -Wno-unused-function -Iinclude -Isrc
-LFLAGS  = -Wno-error=implicit-function-declaration -Wno-error=unused-function -Wno-error=unused-function 
+LFLAGS  = -Wno-error=implicit-function-declaration -Wno-error=unused-function
 DEVFLAGS= -Wall -Wextra -Wshadow -Wformat=2 -fsanitize=address,undefined -Iinclude -Isrc
 
 # --- Core Emulator ---
-CORE_SRC = src/core/runner.c src/core/cpu.c src/core/memory.c src/core/instructions.c src/core/IO/display.c
+CORE_SRC = src/core/runner.c src/core/cpu.c src/core/memory.c src/core/instructions.c src/core/IO/display.c src/core/IO/keyboard.c
 CORE_BIN = idn16
 
 # --- Disassembler ---
@@ -27,13 +27,14 @@ ASM_SRC  = src/tools/assembler/asm_main.c \
 		   src/tools/assembler/symbol_table.c
 
 # --- Unit Tests ---
-TEST_MEM_SRC = test/test_memory.c
-TEST_CPU_SRC = test/test_cpu.c
-UNITY_SRC	= test/unity.c
+TEST_DIR     = src/tests
+TEST_MEM_SRC = $(TEST_DIR)/test_memory.c
+TEST_CPU_SRC = $(TEST_DIR)/test_cpu.c
+UNITY_SRC    = $(TEST_DIR)/Unity/unity.c
 TEST_MEM_BIN = test_memory
 TEST_CPU_BIN = test_cpu
 
-.PHONY: all core asmblr asm disasm test run_test_memory run_test_cpu clean
+.PHONY: all core asmblr disasmblr test run_test_memory run_test_cpu clean
 
 all: core test asmblr
 
@@ -84,4 +85,12 @@ $(TEST_CPU_BIN): $(TEST_CPU_SRC) $(UNITY_SRC) src/core/cpu.c src/core/memory.c s
 clean:
 	rm -f $(CORE_BIN) $(ASM_BIN) $(DASM_BIN) $(TEST_MEM_BIN) $(TEST_CPU_BIN)
 	rm -f src/core/*.o src/tools/*.o src/tools/assembler/*.o
-	rm -f src/tools/assembler/lex.yy.c src/tools/assembler/parser.tab.* *.o *.bin
+	rm -f $(LEXYY) $(PARSER_TABC) $(PARSER_TABH)
+	rm -f *.o *.bin
+
+# --- Install/Development helpers ---
+install-deps:
+	sudo apt update
+	sudo apt install build-essential libsdl2-dev libsdl2-ttf-dev flex bison git
+
+dev: clean all

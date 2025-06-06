@@ -1,18 +1,26 @@
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
 
-#define MAX_LABEL 1024
+#include <stdint.h>
+#define MAX_SYMBOL 4096
 
-// Insert a label with its associated address (in instruction words)
-void insert_label(const char* name, int address);
+typedef struct Symbol {
+    char* name;
+    int value;
+    int type;
+} Symbol;
 
-// Sort the list of labels
-void sort_labels(void);
+// Insert a label/assignment with its associated value (addresses are in instruction words)
+void insert_symbol(const char* name, int value, int type);
 
-// Look up a previously inserted label; exits on undefined label
-int get_label(const char* name);
+// Sort the list of labels/assignments  
+void sort_symbols(void);
+
+// Look up a previously inserted label/assignment and returns its value and type; exits on undefined label/assignment
+int get_symbol(const char* name, int* type);
 
 // Free all label storage (call at end of assembly)
-void free_labels(void);
+void free_symbols(void);
+
 
 #endif // SYMBOL_TABLE_H

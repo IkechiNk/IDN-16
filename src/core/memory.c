@@ -1,332 +1,233 @@
 #include "memory.h"
-#include "keyboard.c"
 #include "stdio.h"
-#include "tools/dasm.h"
 
-SoundSystem sound_system;
-
-// Memory regions
+// Memory regions configuration
 static const MemoryRegion memory_regions[REGION_COUNT] = {
-    {ROM_START, ROM_END, true, false, "ROM"},
+    {ROM_START, ROM_END, true, false, "User ROM"},
     {RAM_START, RAM_END, false, false, "RAM"},
-    {VIDEO_MEM_START, VIDEO_MEM_END, false, false, "Video Memory"},
-    {SPRITE_MEM_START, SPRITE_MEM_END, false, true, "Sprite Memory"},
-    {PALETTE_MEM_START, PALETTE_MEM_END, false, false, "Palette Memory"},
-    {SOUND_REG_START, SOUND_REG_END, false, true, "Sound Registers"},
+    {VIDEO_RAM_START, VIDEO_RAM_END, false, true, "Video Memory"},
+    {AUDIO_REG_START, AUDIO_REG_END, false, true, "Audio Registers"},
     {INPUT_REG_START, INPUT_REG_END, false, true, "Input Registers"},
-    {SYSTEM_CTRL_START, SYSTEM_CTRL_END, false, true, "System Control Registers"},
+    {SYSTEM_CTRL_START, SYSTEM_CTRL_END, false, true, "System Control"},
     {SYSTEM_ROM_START, SYSTEM_ROM_END, true, false, "System ROM"},
 };
 
-static int is_little_endian(void) {
+static bool is_little_endian(void) {
     uint16_t value = 0x0001;
-    return *((uint8_t*)&value);  // Returns 1 if little endian, 0 if big endian
+    return *((uint8_t*)&value);
 }
 
-void load_startup(uint8_t memory[]) {
-    FILE* rom = fopen("src/core/roms/start.bin", "rb");
-    if (!rom) {
-        perror("Error opening startup file");
-        exit(1);
+bool load_rom(uint8_t memory[], const char* rom) {
+    char full_rom_loc[14 + strlen(rom) + 1];
+    sprintf(full_rom_loc, "src/core/roms/%s", rom);
+    FILE* fRom = fopen(full_rom_loc, "rb");
+    if (!fRom) {
+        return false;
     }
-    fread(memory, 1, 65536, rom);
-    fclose(rom);
-
-    return;
-}
-
-void initialize_palettes(uint8_t memory[]) {
-    // Define common 16-bit RGB565 colors
-    const uint16_t palette_colors[16] = {
-        0x0000,  // 0: Black
-        0xFFFF,  // 1: White
-        0xF800,  // 2: Red
-        0x07E0,  // 3: Green
-        0x001F,  // 4: Blue
-        0xFFE0,  // 5: Yellow
-        0x07FF,  // 6: Cyan
-        0xF81F,  // 7: Magenta
-        0xC618,  // 8: Light gray
-        0x8410,  // 9: Dark gray
-        0xFC10,  // 10: Orange
-        0x8000,  // 11: Dark red
-        0x0400,  // 12: Dark green
-        0x0010,  // 13: Dark blue
-        0x8010,  // 14: Purple
-        0x0450   // 15: Teal
-    };
+    // Get file size first
+    fseek(fRom, 0, SEEK_END);
+    size_t file_size = ftell(fRom);
+    rewind(fRom);
     
-    // Store each 16-bit color
-    for (int i = 0; i < 16; i++) {
-        memory_write_word(memory, PALETTE_MEM_START + i*2, palette_colors[i]);
-    }
-}
-
-void memory_init(uint8_t memory[]) {
-    memset(memory, 0, MEMORY_SIZE);
+    // Read up to ROM size limit
+    size_t max_read = (ROM_END - ROM_START + 1); // 0x2000 bytes
+    size_t bytes_to_read = (file_size < max_read) ?  file_size : max_read;
     
-    memory[SYSTEM_CTRL_START] = 0; // System status
-    memory[SYSTEM_CTRL_START + 1] = 0; // Interrupt control
-
-    initialize_palettes(memory);
-    
-    // TODO: Initialize system rom with handlers and functions
-    load_startup(memory);
-}
-
-uint8_t get_controller1_button_state() {
-    uint8_t button_state = 0;
-    
-    // Check real keyboard/gamepad and set bits accordingly
-    if (is_key_pressed(SDL_SCANCODE_F))         button_state |= 0x01; // A button
-    if (is_key_pressed(SDL_SCANCODE_G))         button_state |= 0x02; // B button
-    if (is_key_pressed(SDL_SCANCODE_TAB))       button_state |= 0x04; // Start
-    if (is_key_pressed(SDL_SCANCODE_LSHIFT))    button_state |= 0x08; // Select
-    if (is_key_pressed(SDL_SCANCODE_W))         button_state |= 0x10; // Up
-    if (is_key_pressed(SDL_SCANCODE_S))         button_state |= 0x20; // Down
-    if (is_key_pressed(SDL_SCANCODE_A))         button_state |= 0x40; // Left
-    if (is_key_pressed(SDL_SCANCODE_D))         button_state |= 0x80; // Right
-    
-    return button_state;
-}
-
-uint8_t get_controller2_button_state() {
-    uint8_t button_state = 0;
-    
-    // Check real keyboard/gamepad and set bits accordingly
-    if (is_key_pressed(SDL_SCANCODE_J))         button_state |= 0x01; // A button
-    if (is_key_pressed(SDL_SCANCODE_K))         button_state |= 0x02; // B button
-    if (is_key_pressed(SDL_SCANCODE_RETURN))    button_state |= 0x04; // Start
-    if (is_key_pressed(SDL_SCANCODE_RSHIFT))    button_state |= 0x08; // Select
-    if (is_key_pressed(SDL_SCANCODE_UP))        button_state |= 0x10; // Up
-    if (is_key_pressed(SDL_SCANCODE_DOWN))      button_state |= 0x20; // Down
-    if (is_key_pressed(SDL_SCANCODE_LEFT))      button_state |= 0x40; // Left
-    if (is_key_pressed(SDL_SCANCODE_RIGHT))     button_state |= 0x80; // Right
-    
-    return button_state;
-}
-
-
-uint8_t handle_input_read(uint16_t offset) {
-    switch (offset) {
-        case 0x00: // Controller 1 state
-            return get_controller1_button_state();
-            break;
-        case 0x01: // Controller 2 state
-            return get_controller2_button_state();
-            break;
-        default:
-            return 0x00; // Invalid offset
-            break;
-    }
-}
-
-uint8_t handle_sound_read(uint16_t offset) {
-    uint8_t channel = offset / 16;
-    uint8_t reg = offset % 16;
-
-    if (channel >= 4) {
-        fprintf(stderr, "Error: Invalid sound channel %d\n", channel);
-        return 0;
-    }
-    
-    // Map the memory address to the sound system
-    switch (reg) {
-        case 0x0: 
-            return sound_system.channels[channel].frequency & 0xFF;
-            break;
-        case 0x1: 
-            return (sound_system.channels[channel].frequency >> 8) & 0xFF;
-            break;
-        case 0x2: 
-            return sound_system.channels[channel].volume;
-            break;
-        default:
-            printf("Read from sound channel: 0x%04X:0x%04X\n", channel, reg);
-            break;
-    }
-    return 0;
-}
-
-
-bool handle_input_write(uint16_t offset, uint8_t value) {
-    switch (offset) {
-        case 0x00: 
-        case 0x01:
-            printf("Write to read-only input register: 0x%04X\n", offset);
-            return false; 
-            break;
-        default:    
-            printf("(nothing actually written) Write to input register: 0x%04X = %u\n", offset, value);
-            return true; 
-            break;       
-    }
-}
-
-bool handle_sound_write(uint16_t offset, uint8_t value) {
-    uint8_t channel = offset / 16;
-    uint8_t reg = offset % 16;
-    
-    // Update sound structure based on memory write
-    switch (reg) {
-        case 0x0:
-            sound_system.channels[channel].frequency = 
-                (sound_system.channels[channel].frequency & 0xFF00) | value;
-            // Call function to update sound frequency
-            return true;
-            break;
-        case 0x1:
-            sound_system.channels[channel].frequency = 
-                (sound_system.channels[channel].frequency & 0x00FF) | (value << 8);
-            // Call function to update sound frequency
-            return true;
-            break;
-        case 0x2:
-            sound_system.channels[channel].volume = value;
-            // Call function to update sound volume
-            return true;
-            break;
-        default:
-            printf("(nothing actually written) Write to sound channel: 0x%04X:0x%04X = %u\n", channel, reg, value);
-            return true;
-            break;
-    }
-}
-
-bool handle_system_write(uint16_t offset, uint8_t value, uint8_t memory[]) {
-    memory[SYSTEM_CTRL_START + offset] = value;
-    printf("(Simulated Write) Write to system register: 0x%04X = %u\n", offset, value);
+    fread(memory, 1, bytes_to_read, fRom);
+    fclose(fRom);
     return true;
 }
 
-uint8_t memory_read_byte(uint8_t memory[], uint16_t address) {
-    MemoryRegion_t region_type = memory_get_region(address);
-    const MemoryRegion* region = &memory_regions[region_type];
-    if (region->memory_mapped_io && region_type != REGION_COUNT) {
-        switch (region_type)
-        {
-        case REGION_INPUT:
-            return handle_input_read(address - INPUT_REG_START);
-            break;
-        case REGION_SOUND:
-            return handle_sound_read(address - SOUND_REG_START);
-            break;
-        default:
-            printf("Read from memory-mapped I/O: 0x%04X\n", address);
-            return 0x00;
-            break;
+void memory_init(uint8_t memory[]) {
+    // Clear all memory
+    memset(memory, 0, MEMORY_SIZE);
+    memset(memory, 0b11000, ROM_END - ROM_START + 1);
+    
+    // Initialize system control registers
+    memory[SYSTEM_STATUS_REG] = 0x01; // System running
+    memory[INTERRUPT_CONTROL_REG] = 0x00; // Interrupts disabled initially
+    
+    // Initialize video system
+    initialize_video_memory(memory);
+    initialize_default_palette(memory);
+    initialize_default_tileset(memory);
+    
+    // Load system ROM with built-in functions
+    load_system_rom(memory);
+    
+    printf("IDN-16 System initialized\n");
+}
+
+void initialize_video_memory(uint8_t memory[]) {
+    // Set initial video mode to text
+    memory_write_byte(memory, VIDEO_MODE_REG, VIDEO_MODE_TEXT, true);
+    
+    // Clear scroll registers
+    memory_write_word(memory, SCROLL_X_REG, 0, true);
+    memory_write_word(memory, SCROLL_Y_REG, 0, true);
+    
+    // Clear tile buffer
+    for (int i = 0; i < SCREEN_WIDTH_TILES * SCREEN_HEIGHT_TILES; i++) {
+        memory_write_byte(memory, TILE_BUFFER_START + i, 0, true);
+    }
+    
+    // Clear sprite table
+    for (int i = 0; i < MAX_SPRITES * 4; i++) {
+        memory_write_byte(memory, SPRITE_TABLE_START + i, 0, true);
+    }
+}
+
+void initialize_default_palette(uint8_t memory[]) {
+    // Simple 16-color palette
+    const uint16_t default_colors[16] = {
+        0x0000, // 0 - Black
+        0x000F, // 1 - Dark Blue
+        0x03E0, // 2 - Dark Green  
+        0x03EF, // 3 - Dark Cyan
+        0x7C00, // 4 - Dark Red
+        0x7C0F, // 5 - Dark Magenta
+        0x7FE0, // 6 - Brown/Dark Yellow
+        0x7BEF, // 7 - Light Gray
+        0x39C7, // 8 - Dark Gray
+        0x001F, // 9 - Blue
+        0x07E0, // 10 - Green
+        0x07FF, // 11 - Cyan
+        0xF800, // 12 - Red
+        0xF81F, // 13 - Magenta
+        0xFFE0, // 14 - Yellow
+        0xFFFF, // 15 - White
+    };
+    
+    for (int i = 0; i < 16; i++) {
+        memory_write_word(memory, PALETTE_RAM_START + (i * 2), default_colors[i], true);
+    }
+    
+    // Fill remaining palette entries with variations
+    for (int i = 16; i < PALETTE_SIZE; i++) {
+        uint16_t base_color = default_colors[i % 16];
+        // Darken the color slightly for variations
+        uint16_t variant = ((base_color >> 1) & 0x7BEF);
+        memory_write_word(memory, PALETTE_RAM_START + (i * 2), variant, true);
+    }
+}
+
+void initialize_default_tileset(uint8_t memory[]) {
+    // Create simple default tiles
+    // Each tile is 8x8 pixels, but we'll store them as 32 bytes (8x8/2, 4 bits per pixel)
+    
+    // Tile 0: Empty (all zeros - already cleared)
+    
+    // Tile 1: Solid fill
+    for (int i = 0; i < 32; i++) {
+        memory_write_byte(memory, TILESET_DATA_START + 32 + i, 0x11, true);
+    }
+    
+    // Tile 2: Checkerboard
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 4; x++) { // 4 bytes per row
+            uint8_t pattern = ((x + y) % 2) ? 0x12 : 0x21;
+            memory_write_byte(memory, TILESET_DATA_START + 64 + (y * 4) + x, pattern, true);
         }
     }
-    else {
-        return memory[address];
+    
+    // Tile 3: Border
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 4; x++) {
+            uint8_t pattern = 0x00;
+            if (y == 0 || y == 7 || x == 0 || x == 3) {
+                pattern = 0x33;
+            }
+            memory_write_byte(memory, TILESET_DATA_START + 96 + (y * 4) + x, pattern, true);
+        }
     }
+}
+
+void load_system_rom(uint8_t memory[]) {
+    // For now, create minimal system ROM with simple function stubs
+    // In a full implementation, this would load actual system ROM functions
+    
+    // System ROM function addresses - just put RET instructions for now
+    uint16_t system_functions[] = {
+        0x4300, // SYS_CLEAR_SCREEN
+        0x4302, // SYS_PUT_CHAR
+        0x4304, // SYS_PUT_STRING
+        0x4306, // SYS_SET_CURSOR
+        0x4334, // SYS_SET_VIDEO_MODE
+        0x4312, // SYS_SET_TILE
+        0x4314, // SYS_CREATE_SPRITE
+        0x4316, // SYS_MOVE_SPRITE
+        0x4330, // SYS_SET_PALETTE
+        0x4336, // SYS_SET_SCROLL
+        0x4400, // SYS_PLAY_TONE
+        0x4408, // SYS_STOP_CHANNEL
+        0x4500, // SYS_GET_KEYS
+        0x4502, // SYS_WAIT_KEY
+        0x4600, // SYS_MULTIPLY
+        0x4602, // SYS_DIVIDE
+        0x460C, // SYS_RANDOM
+        0x4700, // SYS_MEMCPY
+        0x4702, // SYS_MEMSET
+        0x4706, // SYS_STRLEN
+        0       // End array and allow for easier expansion
+    };
+    
+    // Install RET instructions at each function address
+    for (int i = 0; system_functions[i] != 0; i++) {
+        uint16_t addr = system_functions[i];
+        memory_write_word(memory, addr, 0xC000, true); // RET instruction
+    }
+    
+    printf("System ROM loaded with function stubs\n");
+}
+
+uint8_t memory_read_byte(uint8_t memory[], uint16_t address) {
+    return memory[address];
 }
 
 uint16_t memory_read_word(uint8_t memory[], uint16_t address) {
-    MemoryRegion_t region_type = memory_get_region(address);
-    const MemoryRegion* region = &memory_regions[region_type];
-    if (region->memory_mapped_io && region_type != REGION_COUNT) {
-        switch (region_type)
-        {
-        case REGION_INPUT:
-            return handle_input_read(address - INPUT_REG_START);
-            break;
-        case REGION_SOUND:
-            return handle_sound_read(address - SOUND_REG_START);
-            break;
-        default:
-            printf("Read from memory-mapped I/O: 0x%04X\n", address);
-            return 0x00;
-            break;
-        }
+    if (address == MEMORY_SIZE - 1) {
+        fprintf(stderr, "Error: Attempt to read word from odd address.\n");
+        return 0;
     }
-    else {
-        if (address == MEMORY_SIZE - 1) {
-            fprintf(stderr, "Error: Attempt to read word from odd address.\n");
-            return 0;
-        }
-        uint16_t data;
-        if (is_little_endian()) {
-            data = (memory[address + 1] << 8) | memory[address];
-        } else {
-            data = (memory[address] << 8) | memory[address + 1];
-        }
-        return data;
+    uint16_t data;
+    if (is_little_endian()) {
+        data = (memory[address + 1] << 8) | memory[address];
+    } else {
+        data = (memory[address] << 8) | memory[address + 1];
     }
+    return data;
 }
 
-bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data) {
+bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data, bool privileged) {
     MemoryRegion_t region_type = memory_get_region(address);
     const MemoryRegion* region = &memory_regions[region_type];
-    if (region->read_only) {
-        fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
+    if (region->read_only && !privileged) {
+        fprintf(stderr, "Error: Attempt to write to read-only memory. REGION: %s\n", region->name);
         exit(1);
     }
-    if (region->memory_mapped_io && region_type != REGION_COUNT) {
-        bool success = false;
-        switch (region_type)
-        {
-        case REGION_INPUT:
-            success = handle_input_write(address - INPUT_REG_START, data);
-            break;
-        case REGION_SOUND:
-            success = handle_sound_write(address - SOUND_REG_START, data);
-            break;
-        case REGION_SYSTEM_CTRL:
-            success = handle_system_write(address - SYSTEM_CTRL_START, data, memory);
-            break;
-        default:
-            printf("Write to memory-mapped I/O: 0x%04X\n", address);
-            break;
-        }
-        return success;
-    }
-    else {
-        memory[address] = data;
-        return true;
-    }
+    memory[address] = data;
+    return true;
 }
 
-bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data) {
+bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data, bool privileged) {
     MemoryRegion_t region_type = memory_get_region(address);
     const MemoryRegion* region = &memory_regions[region_type];
-    if (region->read_only) {
-        fprintf(stderr, "Error: Attempt to write to read-only memory.\n");
+    if (region->read_only && !privileged) {
+        fprintf(stderr, "Error: Attempt to write to read-only memory. REGION: %s\n", region->name);
         exit(1);
     }
-    if (region->memory_mapped_io && region_type != REGION_COUNT) {
-        bool success = false;
-        switch (region_type)
-        {
-        case REGION_INPUT:
-            success = handle_input_write(address - INPUT_REG_START, data);
-            break;
-        case REGION_SOUND:
-            success = handle_sound_write(address - SOUND_REG_START, data);
-            break;
-        case REGION_SYSTEM_CTRL:
-            success = handle_system_write(address - SYSTEM_CTRL_START, data, memory);
-            break;
-        default:
-            printf("Write to memory-mapped I/O: 0x%04X\n", address);
-            break;
-        }
-        return success;
+    if (address == MEMORY_SIZE - 1) {
+        fprintf(stderr, "Error: Attempt to write word to odd address.\n");
+        exit(1);
     }
-    else {
-        if (address == MEMORY_SIZE - 1) {
-            fprintf(stderr, "Error: Attempt to write word to odd address.\n");
-            exit(1);
-        }
-        if (is_little_endian()) {
-            memory[address] = (uint8_t)(data >> 8);
-            memory[address + 1] = (uint8_t)(data & 0x00FF);
-        } else {
-            memory[address ] = (uint8_t)(data & 0x00FF);
-            memory[address + 1] = (uint8_t)(data >> 8);
-        }
-        return true;
+    if (is_little_endian()) {
+        memory[address] = (uint8_t)(data >> 8);
+        memory[address + 1] = (uint8_t)(data & 0x00FF);
+    } else {
+        memory[address ] = (uint8_t)(data & 0x00FF);
+        memory[address + 1] = (uint8_t)(data >> 8);
     }
+    return true;
 }
 
 MemoryRegion_t memory_get_region(uint16_t address) {

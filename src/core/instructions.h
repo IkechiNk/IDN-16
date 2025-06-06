@@ -39,10 +39,8 @@
 #define NOP  27
 #define	INC  28
 #define	DEC  29
-#define	PUSH 30
-#define	POP  31
-#define LDB  32
-#define STB  33
+#define LDB  30
+#define STB  31
 
 void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_t *cpu);
 void sub(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_t *cpu);
@@ -75,10 +73,8 @@ void hlt(Cpu_t *cpu);
 void nop(Cpu_t *cpu);
 void inc(uint16_t rd, Cpu_t *cpu);
 void dec(uint16_t rd, Cpu_t *cpu);
-void push(uint16_t rd, Cpu_t *cpu);
-void pop(uint16_t rd, Cpu_t *cpu);
 void lui(uint16_t rd, uint16_t imm, Cpu_t *cpu);
 void stb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu);
-void ldb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu);
+void ldh(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu);
 
 #endif // IDN16_INSTRUCTIONS_H

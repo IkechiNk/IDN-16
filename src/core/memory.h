@@ -10,48 +10,84 @@
 
 // Memory region sizes
 #define MEMORY_SIZE 65536 // 64KB
-#define ROM_SIZE 8192 // 8KB
-#define RAM_SIZE 8192 // 8KB
-#define VIDEO_MEM_SIZE 2048 // 2KB
-#define SPRITE_MEM_SIZE 2048 // 2KB
-#define PALETTE_MEM_SIZE 256 // 256B
-#define SOUND_REG_SIZE 256 // 256B
-#define INPUT_REG_SIZE 256 // 256B
-#define SYSTEM_CTRL_SIZE 256 // 256B
-#define SYSTEM_ROM_SIZE 4096 // 4KB
 
-// Memory Map adressing constraints
+// Memory Map addressing constraints
 #define ROM_START 0x0000
-#define ROM_END 0x1FFF
-#define RAM_START 0x2000
-#define RAM_END 0x3FFF
-#define VIDEO_MEM_START 0x4000
-#define VIDEO_MEM_END 0x47FF
-#define SPRITE_MEM_START 0x4800
-#define SPRITE_MEM_END 0x4FFF
-#define PALETTE_MEM_START 0x5000
-#define PALETTE_MEM_END 0x50FF
-#define SOUND_REG_START 0x5100
-#define SOUND_REG_END 0x51FF
-#define INPUT_REG_START 0x5200
-#define INPUT_REG_END 0x52ff
-#define SYSTEM_CTRL_START 0x5300
-#define SYSTEM_CTRL_END 0x53FF
-#define SYSTEM_ROM_START 0x5400
-#define SYSTEM_ROM_END 0x63FF
+#define ROM_END 0x1FFF                    // 8KB user ROM
+#define RAM_START 0x2000  
+#define RAM_END 0x2FFF                    // 4KB general RAM
+
+// Video Memory Layout
+#define VIDEO_RAM_START 0x3000
+#define VIDEO_RAM_END 0x3FFF              // 4KB video RAM
+
+#define TILE_BUFFER_START 0x3000
+#define TILE_BUFFER_END 0x34FF            // 40x30 tiles = 1200 bytes
+#define SPRITE_TABLE_START 0x3500
+#define SPRITE_TABLE_END 0x35FF           // 64 sprites x 4 bytes = 256 bytes
+#define PALETTE_RAM_START 0x3600
+#define PALETTE_RAM_END 0x367F            // 64 colors x 2 bytes = 128 bytes
+#define VIDEO_CONTROL_START 0x3680
+#define VIDEO_CONTROL_END 0x369F          // Video control registers = 32 bytes
+#define TILESET_DATA_START 0x36A0
+#define TILESET_DATA_END 0x3FFF           // 256 tiles x 32 bytes each
+
+// Audio, Input, System
+#define AUDIO_REG_START 0x4000
+#define AUDIO_REG_END 0x40FF              // 256 bytes audio
+#define INPUT_REG_START 0x4100
+#define INPUT_REG_END 0x41FF              // 256 bytes input
+#define SYSTEM_CTRL_START 0x4200
+#define SYSTEM_CTRL_END 0x42FF            // 256 bytes system control
+
+// System ROM - massive space for built-in functions
+#define SYSTEM_ROM_START 0x4300
+#define SYSTEM_ROM_END 0xFFFF             // ~47KB system ROM
+
+// Display constants
+#define SCREEN_WIDTH_TILES 40
+#define SCREEN_HEIGHT_TILES 30
+#define TILE_SIZE 8
+#define SCREEN_WIDTH_PIXELS (SCREEN_WIDTH_TILES * TILE_SIZE)
+#define SCREEN_HEIGHT_PIXELS (SCREEN_HEIGHT_TILES * TILE_SIZE)
+#define MAX_SPRITES 64
+#define MAX_TILES 256
+#define PALETTE_SIZE 64
+
+// Video Control Register Offsets
+#define VIDEO_MODE_REG (VIDEO_CONTROL_START + 0)      // Current video mode
+#define SCROLL_X_REG (VIDEO_CONTROL_START + 2)        // Background scroll X
+#define SCROLL_Y_REG (VIDEO_CONTROL_START + 4)        // Background scroll Y
+#define CURSOR_X_REG (VIDEO_CONTROL_START + 6)        // Text cursor X
+#define CURSOR_Y_REG (VIDEO_CONTROL_START + 8)        // Text cursor Y
+
+// Video Modes
+#define VIDEO_MODE_TEXT 0
+#define VIDEO_MODE_TILES 1  
+#define VIDEO_MODE_MIXED 2
+
+// Input Register Offsets
+#define INPUT_CONTROLLER1 (INPUT_REG_START + 0)
+#define INPUT_CONTROLLER2 (INPUT_REG_START + 1)
+
+// System Control Register Offsets  
+#define SYSTEM_STATUS_REG (SYSTEM_CTRL_START + 0)
+#define INTERRUPT_CONTROL_REG (SYSTEM_CTRL_START + 1)
+#define TIMER_COUNTER_LOW (SYSTEM_CTRL_START + 2)
+#define TIMER_COUNTER_HIGH (SYSTEM_CTRL_START + 4)
+#define FRAME_COUNTER_LOW (SYSTEM_CTRL_START + 6)
+#define FRAME_COUNTER_HIGH (SYSTEM_CTRL_START + 8)
 
 // Memory regions
 typedef enum {
     REGION_ROM,
-    REGION_RAM,
+    REGION_RAM, 
     REGION_VIDEO,
-    REGION_SPRITE,
-    REGION_PALETTE,
-    REGION_SOUND,
+    REGION_AUDIO,
     REGION_INPUT,
     REGION_SYSTEM_CTRL,
     REGION_SYSTEM_ROM,
-    REGION_COUNT // Enum defines automatically
+    REGION_COUNT
 } MemoryRegion_t;
 
 // Memory region structure
@@ -60,88 +96,37 @@ typedef struct {
     uint16_t end_address;
     bool read_only;
     bool memory_mapped_io;
-    const char* name; // Debugging purposes
+    const char* name;
 } MemoryRegion;
 
-typedef struct {
-    uint16_t frequency;
-    uint8_t volume;
-    uint8_t waveform;
-    uint8_t duty_cycle;
-    uint8_t status;
-    uint8_t envelope_settings;
-    bool enabled;
-} SoundChannel;
-
-typedef struct {
-    SoundChannel channels[4];
-    uint8_t master_volume;
-    uint8_t audio_control;
-} SoundSystem;
-
 /* 
- * Initializes memory with default values of 0. 
-    * @param memory The memory array to initialize.
+ * Initializes memory with default values and system ROM
  */
 void memory_init(uint8_t memory[]); 
 
+bool load_rom(uint8_t memory[], const char* rom);
+
 /* 
- * Reads a byte from memory.
-    * @param memory The memory array to read from.
-    * @param address The address to read from.
-    * @return The byte read from memory.
+ * Memory access functions
  */
 uint8_t memory_read_byte(uint8_t memory[], uint16_t address);
-
-/* 
- * Reads a word from memory.
-    * @param memory The memory array to read from.
-    * @param address The address to read from.
-    * @return The word read from memory.
- */
 uint16_t memory_read_word(uint8_t memory[], uint16_t address);
+bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data, bool privileged);
+bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data, bool privileged);
 
 /* 
- * Writes given byte to memory address. Returns success of operation.
-    * @param memory The memory array to write to.
-    * @param address The address to write to.
-    * @param data The byte to write.
-    * @return true if the write was successful, false otherwise.
+ * Memory region management
  */
-bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data);
-
-/* 
- * Writes given word to memory address. Returns success of operation.
-    * @param memory The memory array to write to.
-    * @param address The address to write to.
-    * @param data The word to write.
-    * @return true if the write was successful, false otherwise.
- */
-bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data);
-
-/* 
- * Returns the region type of the given address. 
-    * @param address The address to check.
-    * @return The memory region type.
- */ 
 MemoryRegion_t memory_get_region(uint16_t address);
-
-/* 
- * Dumps contents stored in memory addresses.
-    * @param memory The memory array to dump.
-    * @param start_address The starting address to dump from.
-    * @param length The number of address lines to dump.
-    * @param chunk_size The number of bytes per address line
-    * @note This function is used for debugging purposes.
- */
 void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint16_t chunk_size);
 
-// Function prototypes for testing purposes
-void initialize_rom(uint8_t memory[]);
-void load_startup(uint8_t memory[]);
-void initialize_palettes(uint8_t memory[]);
-bool handle_input_write(uint16_t offset, uint8_t value);
-bool handle_sound_write(uint16_t offset, uint8_t value);
-uint8_t handle_input_read(uint16_t offset);
-uint8_t handle_sound_read(uint16_t offset);
+/* 
+ * System initialization functions
+ */
+void initialize_video_memory(uint8_t memory[]);
+void initialize_default_palette(uint8_t memory[]);
+void initialize_default_tileset(uint8_t memory[]);
+void load_system_rom(uint8_t memory[]);
+void create_minimal_system_rom(uint8_t memory[]);
+
 #endif // IDN16_MEMORY_H

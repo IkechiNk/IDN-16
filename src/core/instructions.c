@@ -230,7 +230,7 @@ void ldw(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu) {
 }
 void stw(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu) {
     uint16_t address = cpu->r[rs1] + sign_extend_5(imm);
-    memory_write_word(cpu->memory, address, cpu->r[rd]);
+    memory_write_word(cpu->memory, address, cpu->r[rd], false);
     cpu->pc += 2;
 }
 void addi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu) {
@@ -328,6 +328,7 @@ void jlt(uint16_t imm, Cpu_t *cpu) {
     }
 }
 void jsr(uint16_t imm, Cpu_t *cpu) {
+    cpu->r[7] = cpu->pc + (uint16_t)0b10;
     jmp(imm, cpu);
 }
 void ret(Cpu_t *cpu) {
@@ -355,25 +356,6 @@ void inc(uint16_t rd, Cpu_t *cpu) {
 void dec(uint16_t rd, Cpu_t *cpu) {
     addi(rd, rd, -1, cpu);
 }
-void push(uint16_t rd, Cpu_t *cpu) {
-    memory_write_word(cpu->memory, cpu->r[6], cpu->r[rd]);
-    cpu->r[6] -= 2;
-    cpu->flags.z = (cpu->r[rd] == 0);
-    cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
-    cpu->pc += 2;
-}
-void pop(uint16_t rd, Cpu_t *cpu) {
-    if (rd == 0) {
-        cpu->r[0] = 0;
-        cpu->pc += 2;
-        return;   
-    }
-    cpu->r[6] += 2;
-    cpu->r[rd] = memory_read_word(cpu->memory, cpu->r[6]);
-    cpu->flags.z = (cpu->r[rd] == 0);
-    cpu->flags.n = (cpu->r[rd] & 0x8000) != 0;
-    cpu->pc += 2;
-}
 void lui(uint16_t rd, uint16_t imm, Cpu_t *cpu) {
     if (rd == 0) {
         cpu->r[0] = 0;
@@ -389,7 +371,7 @@ void lui(uint16_t rd, uint16_t imm, Cpu_t *cpu) {
     cpu->r[rd] = result;
     cpu->pc += 2;
 }
-void ldb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu) {
+void ldh(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu) {
     if (rd == 0) {
         cpu->r[0] = 0;
         cpu->pc += 2;
@@ -405,6 +387,6 @@ void ldb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu) {
 }
 void stb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu) {
     uint16_t address = cpu->r[rs1] + sign_extend_5(imm);
-    memory_write_byte(cpu->memory, address, cpu->r[rd]);
+    memory_write_byte(cpu->memory, address, cpu->r[rd], false);
     cpu->pc += 2;
 }

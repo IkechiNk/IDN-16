@@ -1,9 +1,10 @@
 #ifndef IDN16_CPU_H
 #define IDN16_CPU_H
 
-#define CPU_CLOCK_HZ 8000000  // 8 MHz CPU
-#define DISPLAY_REFRESH_HZ 60 // 60 FPS
+#define CPU_CLOCK_HZ 10000  // .5 MHz CPU
+#define DISPLAY_REFRESH_HZ 60 // 60hz
 #define CYCLES_PER_FRAME (CPU_CLOCK_HZ / DISPLAY_REFRESH_HZ)
+#define MS_PER_FRAME (int)(1000 / DISPLAY_REFRESH_HZ)
 
 #include "memory.h"
 
@@ -26,8 +27,7 @@ typedef struct {
         uint8_t n : 1;  // Negative flag
         uint8_t c : 1;  // Carry flag
         uint8_t v : 1;  // Overflow flag
-        uint8_t i : 1;  // Interrupt enable flag
-        uint8_t reserved : 3; // For future use
+        uint8_t reserved : 4; // For future use
     } flags;
 
     // Cycle counter for CPU timing
@@ -61,6 +61,11 @@ Cpu_t* cpu_init(void);
  * Frees the allocated memory pointed to by cpu.
  */
 void cpu_destroy(Cpu_t* cpu);
+
+/*
+ * Runs a full fetch, decode, execute cycle on the cpu.
+ */
+void cpu_cycle(Cpu_t* cpu);
 
 /*
  * Returns the current instruction according to the

@@ -21,13 +21,13 @@ void test_initialize_palettes_sets_default_palette(void) {
 
 void test_memory_write_and_read_byte(void) {
     uint16_t addr = RAM_START + 10;
-    TEST_ASSERT_TRUE(memory_write_byte(test_memory, addr, 0xAB));
+    TEST_ASSERT_TRUE(memory_write_byte(test_memory, addr, 0xAB, false));
     TEST_ASSERT_EQUAL_UINT8(0xAB, memory_read_byte(test_memory, addr));
 }
 
 void test_memory_write_and_read_word(void) {
     uint16_t addr = RAM_START + 20;
-    TEST_ASSERT_TRUE(memory_write_word(test_memory, addr, 0xBEEF));
+    TEST_ASSERT_TRUE(memory_write_word(test_memory, addr, 0xBEEF, false));
     uint16_t val = memory_read_word(test_memory, addr);
     memory_dump(test_memory, addr, 4, 4);
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, val);
@@ -35,13 +35,13 @@ void test_memory_write_and_read_word(void) {
 
 void test_memory_write_read_only(void) {
     // ROM is read-only
-    TEST_ASSERT_FALSE(memory_write_byte(test_memory, ROM_START, 0x12));
-    TEST_ASSERT_FALSE(memory_write_word(test_memory, ROM_START, 0x1234));
+    TEST_ASSERT_FALSE(memory_write_byte(test_memory, ROM_START, 0x12, false));
+    TEST_ASSERT_FALSE(memory_write_word(test_memory, ROM_START, 0x1234, false));
 }
 
 void test_memory_out_of_bounds(void) {
-    TEST_ASSERT_FALSE(memory_write_byte(test_memory, 0x1FFF, 0x12));
-    TEST_ASSERT_FALSE(memory_write_word(test_memory, MEMORY_SIZE - 1, 0x12));
+    TEST_ASSERT_FALSE(memory_write_byte(test_memory, 0x1FFF, 0x12, false));
+    TEST_ASSERT_FALSE(memory_write_word(test_memory, MEMORY_SIZE - 1, 0x12, false));
     TEST_ASSERT_EQUAL_UINT8(0, memory_read_byte(test_memory, MEMORY_SIZE - 1));
 }
 
@@ -80,10 +80,10 @@ void test_handle_sound_write_cases(void) {
 
 void test_memory_dump_runs(void) {
     // Just check that it doesn't crash
-    memory_write_word(test_memory, 0x3333, 0xA123);
-    memory_write_byte(test_memory, 0x3335, 0xCC);
-    memory_write_byte(test_memory, 0x3336, 0xDD);
-    memory_write_byte(test_memory, 0x3337, 0xEE);
+    memory_write_word(test_memory, 0x3333, 0xA123, false);
+    memory_write_byte(test_memory, 0x3335, 0xCC, false);
+    memory_write_byte(test_memory, 0x3336, 0xDD, false);
+    memory_write_byte(test_memory, 0x3337, 0xEE, false);
     memory_dump(test_memory, 0x3333, 2, 4);
 }
 

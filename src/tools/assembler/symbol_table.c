@@ -4,67 +4,66 @@
 #include <stdio.h>
 
 
-typedef struct Label {
-    char* name;
-    int address;
-} Label;
+static Symbol* symbols[MAX_SYMBOL];
+int symbol_cnt = 0;
 
-static Label* labels[MAX_LABEL];
-int label_cnt = 0;
-
-void insert_label(const char* name, int address) {
+void insert_symbol(const char* name, int address, int type) {
     // Check for duplicates maybe? need hashmap
-    Label* label = malloc(sizeof(Label));
-    if (!label) { 
+    Symbol* symbol = malloc(sizeof(Symbol));
+    if (!symbol) { 
         perror("malloc"); 
         exit(1); 
     }
-    label->name = strdup(name);
-    label->address = address;
-    labels[label_cnt++] = label;
+    symbol->name = strdup(name);
+    symbol->value = address;
+    symbol->type = type;
+    symbols[symbol_cnt++] = symbol;
 }
 
 int comp(const void *a, const void *b) {
-    Label* l1 = *(Label**)a;
-    Label* l2 = *(Label**)b;
-    return strcmp(l1->name, l2->name);
+    Symbol* s1 = *(Symbol**)a;
+    Symbol* s2 = *(Symbol**)b;
+    return strcmp(s1->name, s2->name);
 }
 
-// Comparison function for qsort - compares two Label pointers
-int label_compare(const void *a, const void *b) {
-    Label* l1 = *(Label**)a;
-    Label* l2 = *(Label**)b;
-    return strcmp(l1->name, l2->name);
+// Comparison function for qsort - compares two Symbol pointers
+int symbol_compare(const void *a, const void *b) {
+    Symbol* s1 = *(Symbol**)a;
+    Symbol* s2 = *(Symbol**)b;
+    return strcmp(s1->name, s2->name);
 }
 
-// Comparison function for bsearch - compares a string key with a Label pointer
-int label_search(const void *key, const void *element) {
+// Comparison function for bsearch - compares a string key with a Symbol pointer
+int symbol_search(const void *key, const void *element) {
     const char* name = (const char*)key;
-    Label* label = *(Label**)element;
-    return strcmp(name, label->name);
+    Symbol* symbol = *(Symbol**)element;
+    return strcmp(name, symbol->name);
 }
 
-void sort_labels(void) {
-    qsort(labels, label_cnt, sizeof(Label*), label_compare);
+void sort_symbols(void) {
+    qsort(symbols, symbol_cnt, sizeof(Symbol*), symbol_compare);
 }
 
-int get_label(const char* name) {
-    Label** found = (Label**)bsearch(name, labels, label_cnt, sizeof(Label*), label_search);
+int get_symbol(const char* name, int* type) {
+    Symbol** found = (Symbol**)bsearch(name, symbols, symbol_cnt, sizeof(Symbol*), symbol_search);
     if (found) {
-        return (*found)->address;
+        if (type) {
+            *type = (*found)->type;
+        }
+        return (*found)->value;
     }
-    fprintf(stderr, "Error: Undefined label '%s'\n", name);
+    fprintf(stderr, "Error: Undefined symbol '%s'\n", name);
     exit(1);
 }
 
-void free_labels(void) {
-    for (int i = 0; i < label_cnt; i++) {
-        Label* l = labels[i];
-        if (l) {  // Changed from !l 
-            if (l->name) {
-                free(l->name);
+void free_symbols(void) {
+    for (int i = 0; i < symbol_cnt; i++) {
+        Symbol* s = symbols[i];
+        if (s) {  // Changed from !l 
+            if (s->name) {
+                free(s->name);
             }
-            free(l);
+            free(s);
         }
     }
 }

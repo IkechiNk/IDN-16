@@ -2,7 +2,7 @@
 #include "instructions.h"
 #include <stdio.h>
 #include <string.h>
-
+#include <tools/dasm.h>
 
 Cpu_t* cpu_init(void)
 {
@@ -14,7 +14,6 @@ Cpu_t* cpu_init(void)
     cpu->flags.n = 0;
     cpu->flags.c = 0;
     cpu->flags.v = 0;
-    cpu->flags.i = 0;
     cpu->flags.reserved = 0;
     cpu->cycles = 0;
     cpu->running = true;
@@ -27,6 +26,12 @@ void cpu_destroy(Cpu_t* cpu) {
     if (cpu) {
         free(cpu);
     }
+}
+
+void cpu_cycle(Cpu_t* cpu) {
+    uint16_t inst = fetch(cpu);
+    printf("%u: %s\n", cpu->pc / 2, disassemble_word(inst));
+    execute(decode(inst), cpu);
 }
 
 uint16_t fetch(Cpu_t* cpu) {
@@ -65,7 +70,7 @@ shared reg_decode(uint16_t instruction) {
         } else if (func == 0b01) {
             i.inst = SRA;
         } else {
-            fprintf(stderr, "Error: Invalid Instruction Used.\n");
+            fprintf(stderr, "Error: Invalid REG-Instruction Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
         }
         break;
     case 0x07:
@@ -79,11 +84,11 @@ shared reg_decode(uint16_t instruction) {
             i.inst = NOT;
             i.third = 0;
         } else {
-            fprintf(stderr, "Error: Invalid Instruction Used.\n");
+            fprintf(stderr, "Error: Invalid REG-Instruction Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
         }
         break;
     default:
-        fprintf(stderr, "Error: Invalid Instruction Used.\n");
+        fprintf(stderr, "Error: Invalid REG-Instruction Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
         break;
     }
     return i;
@@ -125,7 +130,7 @@ shared imm_decode(uint16_t instruction) {
         i.inst = XORI;
         break;
     default:
-        fprintf(stderr, "Error: Invalid Instruction Used.\n");
+        fprintf(stderr, "Error: Invalid IMM-Instruction Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
         break;
     }
     return i;
@@ -157,7 +162,7 @@ shared jb_decode(uint16_t instruction) {
         i.inst = RET;
         break;
     default:
-        fprintf(stderr, "Error: Invalid Instruction Used.\n");
+        fprintf(stderr, "Error: Invalid JB-Instruction Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
         break;
     }
     return i;
@@ -181,27 +186,19 @@ shared sp_decode(uint16_t instruction) {
         i.first = (instruction >> 8) & 0b111;
         break;
     case 0x04:
-        i.inst = PUSH;
-        i.first = (instruction >> 8) & 0b111;
-        break;
-    case 0x05:
-        i.inst = POP;
-        i.first = (instruction >> 8) & 0b111;
-        break;
-    case 0x06:
         i.inst = LDB;
         i.first = (instruction >> 8) & 0b111;
         i.second = (instruction >> 5) & 0b111;
         i.third = (instruction) & 0b11111;
         break;
-    case 0x07:
+    case 0x05:
         i.inst = STB;
         i.first = (instruction >> 8) & 0b111;
         i.second = (instruction >> 5) & 0b111;
         i.third = (instruction) & 0b11111;
         break;
     default:
-        fprintf(stderr, "Error: Invalid Instruction Used.\n");
+        fprintf(stderr, "Error: Invalid SP-Instruction Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
         break;
     }
     return i;
@@ -218,7 +215,7 @@ shared decode(uint16_t instruction) {
     } else if (opcode == 0x03){
         i = sp_decode(instruction);
     } else {
-        fprintf(stderr, "Error: Invalid Instruction Used.\n");
+        fprintf(stderr, "Error: Invalid Opcode Used: 0x%04X -> %s.\n", instruction, disassemble_word(instruction));
     } 
     return i;
 }
@@ -314,20 +311,14 @@ void execute(shared i, Cpu_t* cpu) {
         case DEC:
             dec(i.first, cpu);
             break;
-        case PUSH:
-            push(i.first, cpu);
-            break;
-        case POP:
-            pop(i.first, cpu);
-            break;
         case LDB:
-            ldb(i.first,i.second,i.third,cpu);
+            ldh(i.first,i.second,i.third,cpu);
             break;
         case STB:
             stb(i.first,i.second,i.third,cpu);
             break;
         default:
-            fprintf(stderr, "Error: Invalid Instruction Used.\n");
+            // fprintf(stderr, "Error: Invalid Instruction Used: 0x%04X -> %s.\n", i.inst, disassemble_word(i.inst));
             break;
     }
 }
