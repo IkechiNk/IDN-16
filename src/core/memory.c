@@ -221,11 +221,11 @@ bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data, bool p
         exit(1);
     }
     if (is_little_endian()) {
-        memory[address] = (uint8_t)(data >> 8);
-        memory[address + 1] = (uint8_t)(data & 0x00FF);
-    } else {
-        memory[address ] = (uint8_t)(data & 0x00FF);
+        memory[address] = (uint8_t)(data & 0x00FF);
         memory[address + 1] = (uint8_t)(data >> 8);
+    } else {
+        memory[address ] = (uint8_t)(data >> 8);
+        memory[address + 1] = (uint8_t)(data & 0x00FF);
     }
     return true;
 }

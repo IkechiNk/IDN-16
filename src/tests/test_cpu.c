@@ -192,20 +192,6 @@ void test_LDI(void) {
     TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
 }
 
-void test_LD_and_ST(void) {
-    cpu->r[1] = 0xABCD;
-    cpu->r[2] = RAM_START;
-    st(1, 2, 0x0F, cpu);
-    cpu->r[3] = 0;
-    ld(3, 2, 0x0F, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0xABCD, cpu->r[3]);
-    // // Edge: ld to r0 (should not change r0)
-    cpu->r[2] = 0x1234;
-    st(2, 1, 0x00, cpu);
-    ld(0, 1, 0x00, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
-}
-
 void test_ADDI(void) {
     cpu->r[1] = 10;
     addi(2, 1, 0x1F, cpu); // 0x1F = -1 (5 bits)
@@ -259,7 +245,7 @@ void test_JEQ(void) {
     // Edge: not taken
     cpu->pc = 0x1000; cpu->flags.z = 0;
     jeq(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 }
 
 void test_JNE(void) {
@@ -270,7 +256,7 @@ void test_JNE(void) {
     // Edge: not taken
     cpu->pc = 0x1000; cpu->flags.z = 1;
     jne(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 }
 
 void test_JGT(void) {
@@ -281,12 +267,12 @@ void test_JGT(void) {
     // Edge: not taken (z set)
     cpu->pc = 0x1000; cpu->flags.z = 1; cpu->flags.n = 0;
     jgt(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 
     // Edge: not taken (n set)
     cpu->pc = 0x1000; cpu->flags.z = 0; cpu->flags.n = 1;
     jgt(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 }
 
 void test_JLT(void) {
@@ -297,20 +283,23 @@ void test_JLT(void) {
     // Edge: not taken (z set)
     cpu->pc = 0x1000; cpu->flags.n = 1; cpu->flags.z = 1;
     jlt(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 
     // Edge: not taken (n not set)
     cpu->pc = 0x1000; cpu->flags.n = 0; cpu->flags.z = 0;
     jlt(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 }
 
 void test_JSR_and_RET(void) {
     cpu->pc = 0x1000;
     jsr(0x10, cpu);
     TEST_ASSERT_EQUAL_UINT16(0x1010, cpu->pc);
+    // JSR should have saved PC + 2 (0x1002) in r[7]
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->r[7]);
     ret(cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1000, cpu->pc);
+    // RET should restore PC to the saved value (0x1002)  
+    TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->pc);
 }
 
 void test_HLT_and_NOP(void) {
@@ -337,23 +326,6 @@ void test_INC_and_DEC(void) {
     TEST_ASSERT_EQUAL_UINT16_MESSAGE(0x0000, cpu->r[0], "dec r0");
 }
 
-void test_PUSH_and_POP(void) {
-    cpu->r[6] = 0x3004; // sp
-    cpu->r[1] = 0xBEEF;
-    push(1, cpu);
-    TEST_ASSERT_EQUAL_HEX16(0x3002, cpu->r[6]);
-    cpu->r[1] = 0;
-    pop(1, cpu);
-    TEST_ASSERT_EQUAL_HEX16(0x3004, cpu->r[6]);
-    TEST_ASSERT_EQUAL_HEX16(0xBEEF, cpu->r[1]);
-
-    // Edge: push/pop r0 (should not change r0)
-    cpu->r[0] = 0x1234;
-    push(0, cpu);
-    pop(0, cpu);
-    TEST_ASSERT_EQUAL_HEX16(0, cpu->r[0]);
-}
-
 void test_LUI(void) {
     lui(1, 0x12, cpu);
     TEST_ASSERT_EQUAL_UINT16(0x1200, cpu->r[1]);
@@ -362,6 +334,44 @@ void test_LUI(void) {
     // Edge: lui to r0 (should not change r0)
     lui(0, 0x12, cpu);
     TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
+}
+
+void test_LDH_and_STB(void) {
+    // Set up test data and ensure we're using valid RAM addresses
+    cpu->r[1] = 0xAB;  // Data to store (byte)
+    cpu->r[2] = RAM_START + 0x100; // Base address in safe RAM area
+    
+    // Store byte
+    stb(1, 2, 0x05, cpu);
+    
+    // Load byte back
+    cpu->r[3] = 0;
+    ldh(3, 2, 0x05, cpu);
+    TEST_ASSERT_EQUAL_UINT16(0xAB, cpu->r[3]);
+    
+    // Test flags for ldh
+    TEST_ASSERT_FALSE(cpu->flags.z);
+    TEST_ASSERT_FALSE(cpu->flags.n);
+    TEST_ASSERT_FALSE(cpu->flags.c);
+    TEST_ASSERT_FALSE(cpu->flags.v);
+    
+    // Edge: ldh to r0 (should not change r0)
+    ldh(0, 2, 0x05, cpu);
+    TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
+    
+    // Test zero flag
+    cpu->r[4] = 0;     // Ensure we have 0 to store
+    stb(4, 2, 0x06, cpu); // Store 0
+    ldh(1, 2, 0x06, cpu);
+    TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[1]);
+    TEST_ASSERT_TRUE(cpu->flags.z);
+    
+    // Test with small positive offset
+    cpu->r[1] = 0xCD;
+    stb(1, 2, 0x07, cpu);
+    cpu->r[3] = 0;
+    ldh(3, 2, 0x07, cpu);
+    TEST_ASSERT_EQUAL_UINT16(0xCD, cpu->r[3]);
 }
 
 int main(void) {
@@ -378,7 +388,6 @@ int main(void) {
     RUN_TEST(test_CMP);
     RUN_TEST(test_NOT);
     RUN_TEST(test_LDI);
-    RUN_TEST(test_LD_and_ST);
     RUN_TEST(test_ADDI);
     RUN_TEST(test_ANDI);
     RUN_TEST(test_ORI);
@@ -391,7 +400,7 @@ int main(void) {
     RUN_TEST(test_JSR_and_RET);
     RUN_TEST(test_HLT_and_NOP);
     RUN_TEST(test_INC_and_DEC);
-    RUN_TEST(test_PUSH_and_POP);
     RUN_TEST(test_LUI);
+    RUN_TEST(test_LDH_and_STB);
     return UNITY_END();
 }

@@ -27,14 +27,20 @@ ASM_SRC  = src/tools/assembler/asm_main.c \
 		   src/tools/assembler/symbol_table.c
 
 # --- Unit Tests ---
-TEST_DIR     = src/tests
-TEST_MEM_SRC = $(TEST_DIR)/test_memory.c
-TEST_CPU_SRC = $(TEST_DIR)/test_cpu.c
-UNITY_SRC    = $(TEST_DIR)/Unity/unity.c
-TEST_MEM_BIN = test_memory
-TEST_CPU_BIN = test_cpu
+TEST_DIR        = src/tests
+TEST_MEM_SRC    = $(TEST_DIR)/test_memory.c
+TEST_CPU_SRC    = $(TEST_DIR)/test_cpu.c
+TEST_SYMTAB_SRC = $(TEST_DIR)/test_symbol_table.c
+TEST_DASM_SRC   = $(TEST_DIR)/test_disassembler.c
+TEST_CODEGEN_SRC= $(TEST_DIR)/test_codegen.c
+UNITY_SRC       = $(TEST_DIR)/Unity/unity.c
+TEST_MEM_BIN    = test_memory
+TEST_CPU_BIN    = test_cpu
+TEST_SYMTAB_BIN = test_symbol_table
+TEST_DASM_BIN   = test_disassembler
+TEST_CODEGEN_BIN= test_codegen
 
-.PHONY: all core asmblr disasmblr test run_test_memory run_test_cpu clean
+.PHONY: all core asmblr disasmblr test run_test_memory run_test_cpu run_test_symbol_table run_test_disassembler run_test_codegen clean
 
 all: core test asmblr
 
@@ -67,7 +73,7 @@ src/tools/%.o: src/tools/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- Unit Tests ---
-test: run_test_memory run_test_cpu
+test: run_test_memory run_test_cpu run_test_symbol_table run_test_disassembler run_test_codegen
 
 run_test_memory: $(TEST_MEM_BIN)
 	./$(TEST_MEM_BIN)
@@ -75,15 +81,33 @@ run_test_memory: $(TEST_MEM_BIN)
 run_test_cpu: $(TEST_CPU_BIN)
 	./$(TEST_CPU_BIN)
 
+run_test_symbol_table: $(TEST_SYMTAB_BIN)
+	./$(TEST_SYMTAB_BIN)
+
+run_test_disassembler: $(TEST_DASM_BIN)
+	./$(TEST_DASM_BIN)
+
+run_test_codegen: $(TEST_CODEGEN_BIN)
+	./$(TEST_CODEGEN_BIN)
+
 $(TEST_MEM_BIN): $(TEST_MEM_SRC) $(UNITY_SRC) src/core/memory.c src/core/instructions.c
 	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
 
-$(TEST_CPU_BIN): $(TEST_CPU_SRC) $(UNITY_SRC) src/core/cpu.c src/core/memory.c src/core/instructions.c
+$(TEST_CPU_BIN): $(TEST_CPU_SRC) $(UNITY_SRC) src/core/cpu.c src/core/memory.c src/core/instructions.c $(DASM_INC)
 	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
+
+$(TEST_SYMTAB_BIN): $(TEST_SYMTAB_SRC) $(UNITY_SRC) src/tools/assembler/symbol_table.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(TEST_DASM_BIN): $(TEST_DASM_SRC) $(UNITY_SRC) src/tools/dasm.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(TEST_CODEGEN_BIN): $(TEST_CODEGEN_SRC) $(UNITY_SRC) src/tools/assembler/codegen.c src/tools/assembler/symbol_table.c
+	$(CC) $(CFLAGS) -o $@ $^
 
 # --- Clean ---
 clean:
-	rm -f $(CORE_BIN) $(ASM_BIN) $(DASM_BIN) $(TEST_MEM_BIN) $(TEST_CPU_BIN)
+	rm -f $(CORE_BIN) $(ASM_BIN) $(DASM_BIN) $(TEST_MEM_BIN) $(TEST_CPU_BIN) $(TEST_SYMTAB_BIN) $(TEST_DASM_BIN) $(TEST_CODEGEN_BIN)
 	rm -f src/core/*.o src/tools/*.o src/tools/assembler/*.o
 	rm -f $(LEXYY) $(PARSER_TABC) $(PARSER_TABH)
 	rm -f *.o *.bin

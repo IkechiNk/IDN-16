@@ -66,4 +66,5 @@ void free_symbols(void) {
             free(s);
         }
     }
+    symbol_cnt = 0;  // Reset the symbol count
 }
