@@ -48,7 +48,6 @@ void yyerror(const char *s);
 
 %left IMM5 IMM8 OFFSET IMM16
 %right NEWLINE
-%left EMPTY
 %%
 program:
     lines
