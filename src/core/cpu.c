@@ -1,8 +1,8 @@
-#include "cpu.h"
-#include "instructions.h"
+#include "idn16/cpu.h"
+#include "idn16/instructions.h"
 #include <stdio.h>
 #include <string.h>
-#include <tools/dasm.h>
+#include "idn16/dasm.h"
 
 Cpu_t* cpu_init(void)
 {

@@ -1,5 +1,5 @@
-#include "display.h"
-#include "core/memory.h"
+#include "idn16/io/display.h"
+#include "idn16/memory.h"
 #include <string.h>
 
 // // Simple 8x8 font for text mode (just a few characters for demo)

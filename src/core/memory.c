@@ -1,4 +1,4 @@
-#include "memory.h"
+#include "idn16/memory.h"
 #include "stdio.h"
 
 // Memory regions configuration

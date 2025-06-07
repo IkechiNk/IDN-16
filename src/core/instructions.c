@@ -1,4 +1,4 @@
-#include "instructions.h"
+#include "idn16/instructions.h"
 
 uint16_t sign_extend_5(uint16_t imm) {
     if (imm >> 4) {

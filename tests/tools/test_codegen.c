@@ -1,7 +1,7 @@
-#include "Unity/unity.h"
-#include "../tools/assembler/codegen.h"
-#include "../tools/assembler/symbol_table.h"
-#include "../core/instructions.h"
+#include "../unity/unity.h"
+#include "idn16/codegen.h"
+#include "idn16/symbol_table.h"
+#include "idn16/instructions.h"
 #include <stdio.h>
 #include <unistd.h>
 

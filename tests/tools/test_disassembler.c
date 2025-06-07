@@ -1,5 +1,5 @@
-#include "Unity/unity.h"
-#include "../tools/dasm.h"
+#include "../unity/unity.h"
+#include "idn16/dasm.h"
 #include <string.h>
 
 void setUp(void) {

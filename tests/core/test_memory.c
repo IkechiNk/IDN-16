@@ -1,5 +1,5 @@
-#include "Unity/unity.h"
-#include "../core/memory.h"
+#include "../unity/unity.h"
+#include "idn16/memory.h"
 #include <SDL2/SDL.h>
 
 static uint8_t test_memory[MEMORY_SIZE];

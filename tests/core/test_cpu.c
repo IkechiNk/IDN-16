@@ -1,6 +1,6 @@
-#include "Unity/unity.h"
-#include "../core/cpu.h"
-#include "../core/instructions.h"
+#include "../unity/unity.h"
+#include "idn16/cpu.h"
+#include "idn16/instructions.h"
 
 static Cpu_t* cpu;
 

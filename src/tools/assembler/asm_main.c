@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "symbol_table.h"
-#include "codegen.h"
+#include "idn16/symbol_table.h"
+#include "idn16/codegen.h"
 
 // Flex/Bison externs
 extern FILE* yyin;

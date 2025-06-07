@@ -73,14 +73,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "codegen.h"
-#include "symbol_table.h"
+#include "idn16/codegen.h"
+#include "idn16/symbol_table.h"
 
 extern int yylineno;
+extern char current_token[256];
+extern char current_line[1024];
+extern int token_idx;
+
 int yylex(void);
 void yyerror(const char *s);
 
-#line 84 "parser.tab.c"
+#line 88 "src/tools/assembler/parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -115,48 +119,56 @@ enum yysymbol_kind_t
   YYSYMBOL_OFFSET = 4,                     /* OFFSET  */
   YYSYMBOL_IMM5 = 5,                       /* IMM5  */
   YYSYMBOL_IMM8 = 6,                       /* IMM8  */
-  YYSYMBOL_LABEL = 7,                      /* LABEL  */
-  YYSYMBOL_ADD = 8,                        /* ADD  */
-  YYSYMBOL_SUB = 9,                        /* SUB  */
-  YYSYMBOL_AND = 10,                       /* AND  */
-  YYSYMBOL_OR = 11,                        /* OR  */
-  YYSYMBOL_XOR = 12,                       /* XOR  */
-  YYSYMBOL_SHL = 13,                       /* SHL  */
-  YYSYMBOL_SHR = 14,                       /* SHR  */
-  YYSYMBOL_SRA = 15,                       /* SRA  */
-  YYSYMBOL_MOV = 16,                       /* MOV  */
-  YYSYMBOL_CMP = 17,                       /* CMP  */
-  YYSYMBOL_NOT = 18,                       /* NOT  */
-  YYSYMBOL_LDI = 19,                       /* LDI  */
-  YYSYMBOL_LD = 20,                        /* LD  */
-  YYSYMBOL_ST = 21,                        /* ST  */
-  YYSYMBOL_ADDI = 22,                      /* ADDI  */
-  YYSYMBOL_LUI = 23,                       /* LUI  */
-  YYSYMBOL_ANDI = 24,                      /* ANDI  */
-  YYSYMBOL_ORI = 25,                       /* ORI  */
-  YYSYMBOL_XORI = 26,                      /* XORI  */
-  YYSYMBOL_JMP = 27,                       /* JMP  */
-  YYSYMBOL_JEQ = 28,                       /* JEQ  */
-  YYSYMBOL_JNE = 29,                       /* JNE  */
-  YYSYMBOL_JGT = 30,                       /* JGT  */
-  YYSYMBOL_JLT = 31,                       /* JLT  */
-  YYSYMBOL_JSR = 32,                       /* JSR  */
-  YYSYMBOL_RET = 33,                       /* RET  */
-  YYSYMBOL_HLT = 34,                       /* HLT  */
-  YYSYMBOL_NOP = 35,                       /* NOP  */
-  YYSYMBOL_INC = 36,                       /* INC  */
-  YYSYMBOL_DEC = 37,                       /* DEC  */
-  YYSYMBOL_PUSH = 38,                      /* PUSH  */
-  YYSYMBOL_POP = 39,                       /* POP  */
-  YYSYMBOL_40_ = 40,                       /* ','  */
-  YYSYMBOL_41_ = 41,                       /* '['  */
-  YYSYMBOL_42_ = 42,                       /* '+'  */
-  YYSYMBOL_43_ = 43,                       /* ']'  */
-  YYSYMBOL_YYACCEPT = 44,                  /* $accept  */
-  YYSYMBOL_program = 45,                   /* program  */
-  YYSYMBOL_lines = 46,                     /* lines  */
-  YYSYMBOL_line = 47,                      /* line  */
-  YYSYMBOL_instruction = 48                /* instruction  */
+  YYSYMBOL_IMM16 = 7,                      /* IMM16  */
+  YYSYMBOL_IDENTIFIER = 8,                 /* IDENTIFIER  */
+  YYSYMBOL_ADD = 9,                        /* ADD  */
+  YYSYMBOL_SUB = 10,                       /* SUB  */
+  YYSYMBOL_AND = 11,                       /* AND  */
+  YYSYMBOL_OR = 12,                        /* OR  */
+  YYSYMBOL_XOR = 13,                       /* XOR  */
+  YYSYMBOL_SHL = 14,                       /* SHL  */
+  YYSYMBOL_SHR = 15,                       /* SHR  */
+  YYSYMBOL_SRA = 16,                       /* SRA  */
+  YYSYMBOL_MOV = 17,                       /* MOV  */
+  YYSYMBOL_CMP = 18,                       /* CMP  */
+  YYSYMBOL_NOT = 19,                       /* NOT  */
+  YYSYMBOL_LDI = 20,                       /* LDI  */
+  YYSYMBOL_LDW = 21,                       /* LDW  */
+  YYSYMBOL_STW = 22,                       /* STW  */
+  YYSYMBOL_ADDI = 23,                      /* ADDI  */
+  YYSYMBOL_LUI = 24,                       /* LUI  */
+  YYSYMBOL_ANDI = 25,                      /* ANDI  */
+  YYSYMBOL_ORI = 26,                       /* ORI  */
+  YYSYMBOL_XORI = 27,                      /* XORI  */
+  YYSYMBOL_JMP = 28,                       /* JMP  */
+  YYSYMBOL_JEQ = 29,                       /* JEQ  */
+  YYSYMBOL_JNE = 30,                       /* JNE  */
+  YYSYMBOL_JGT = 31,                       /* JGT  */
+  YYSYMBOL_JLT = 32,                       /* JLT  */
+  YYSYMBOL_JSR = 33,                       /* JSR  */
+  YYSYMBOL_RET = 34,                       /* RET  */
+  YYSYMBOL_HLT = 35,                       /* HLT  */
+  YYSYMBOL_NOP = 36,                       /* NOP  */
+  YYSYMBOL_INC = 37,                       /* INC  */
+  YYSYMBOL_DEC = 38,                       /* DEC  */
+  YYSYMBOL_LDB = 39,                       /* LDB  */
+  YYSYMBOL_STB = 40,                       /* STB  */
+  YYSYMBOL_LOAD16 = 41,                    /* LOAD16  */
+  YYSYMBOL_NEWLINE = 42,                   /* NEWLINE  */
+  YYSYMBOL_EMPTY = 43,                     /* EMPTY  */
+  YYSYMBOL_44_ = 44,                       /* ':'  */
+  YYSYMBOL_45_ = 45,                       /* '='  */
+  YYSYMBOL_46_ = 46,                       /* ','  */
+  YYSYMBOL_47_ = 47,                       /* '['  */
+  YYSYMBOL_48_ = 48,                       /* '+'  */
+  YYSYMBOL_49_ = 49,                       /* ']'  */
+  YYSYMBOL_YYACCEPT = 50,                  /* $accept  */
+  YYSYMBOL_program = 51,                   /* program  */
+  YYSYMBOL_lines = 52,                     /* lines  */
+  YYSYMBOL_line = 53,                      /* line  */
+  YYSYMBOL_label_def = 54,                 /* label_def  */
+  YYSYMBOL_assignment = 55,                /* assignment  */
+  YYSYMBOL_instruction = 56                /* instruction  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -484,19 +496,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  3
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   169
+#define YYLAST   231
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  44
+#define YYNTOKENS  50
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  5
+#define YYNNTS  7
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  58
+#define YYNRULES  88
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  158
+#define YYNSTATES  212
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   294
+#define YYMAXUTOK   298
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -514,12 +526,12 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,    42,    40,     2,     2,     2,     2,     2,
+       2,     2,     2,    48,    46,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,    44,     2,
+       2,    45,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,    41,     2,    43,     2,     2,     2,     2,     2,     2,
+       2,    47,     2,    49,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -539,19 +551,22 @@ static const yytype_int8 yytranslate[] =
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38,    39
+      35,    36,    37,    38,    39,    40,    41,    42,    43
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_int8 yyrline[] =
+static const yytype_uint8 yyrline[] =
 {
-       0,    34,    34,    37,    39,    43,    47,    51,    52,    53,
-      54,    55,    56,    57,    58,    60,    61,    62,    64,    65,
-      66,    67,    68,    69,    70,    71,    72,    73,    75,    76,
-      77,    78,    79,    80,    81,    82,    83,    84,    85,    86,
-      87,    88,    89,    90,    91,    92,    93,    94,    95,    96,
-      97,    98,    99,   101,   102,   103,   104,   105,   106
+       0,    54,    54,    57,    59,    63,    64,    65,    66,    70,
+      74,    75,    76,    77,    81,    82,    83,    84,    85,    86,
+      87,    88,    89,    90,    91,    93,    94,    95,    96,    97,
+      98,    99,   100,   101,   102,   103,   104,   105,   106,   107,
+     108,   109,   110,   111,   112,   114,   115,   116,   117,   118,
+     119,   120,   121,   122,   123,   124,   125,   126,   127,   128,
+     129,   130,   131,   132,   133,   134,   135,   136,   137,   138,
+     140,   141,   142,   150,   155,   160,   166,   167,   168,   169,
+     170,   171,   172,   173,   175,   176,   177,   178,   179
 };
 #endif
 
@@ -568,11 +583,12 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
 static const char *const yytname[] =
 {
   "\"end of file\"", "error", "\"invalid token\"", "REG", "OFFSET",
-  "IMM5", "IMM8", "LABEL", "ADD", "SUB", "AND", "OR", "XOR", "SHL", "SHR",
-  "SRA", "MOV", "CMP", "NOT", "LDI", "LD", "ST", "ADDI", "LUI", "ANDI",
-  "ORI", "XORI", "JMP", "JEQ", "JNE", "JGT", "JLT", "JSR", "RET", "HLT",
-  "NOP", "INC", "DEC", "PUSH", "POP", "','", "'['", "'+'", "']'",
-  "$accept", "program", "lines", "line", "instruction", YY_NULLPTR
+  "IMM5", "IMM8", "IMM16", "IDENTIFIER", "ADD", "SUB", "AND", "OR", "XOR",
+  "SHL", "SHR", "SRA", "MOV", "CMP", "NOT", "LDI", "LDW", "STW", "ADDI",
+  "LUI", "ANDI", "ORI", "XORI", "JMP", "JEQ", "JNE", "JGT", "JLT", "JSR",
+  "RET", "HLT", "NOP", "INC", "DEC", "LDB", "STB", "LOAD16", "NEWLINE",
+  "EMPTY", "':'", "'='", "','", "'['", "'+'", "']'", "$accept", "program",
+  "lines", "line", "label_def", "assignment", "instruction", YY_NULLPTR
 };
 
 static const char *
@@ -582,7 +598,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-8)
+#define YYPACT_NINF (-9)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -596,22 +612,28 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-      -8,    61,    -7,    -8,    -8,    59,    60,    62,    63,    64,
-      65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
-      75,    76,    77,    78,    29,    33,    37,    41,    45,    49,
-      -8,    -8,    -8,    79,    80,    81,    82,    -8,    -8,    24,
-      46,    47,    48,    50,    51,    53,    55,    56,    57,    58,
-      83,    84,    85,    86,    87,    88,    89,    90,    -8,    -8,
-      -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,
-      -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,
-      -8,    -8,    -8,    -8,    -8,    -8,    91,    96,    97,    98,
-      99,   100,   101,   102,   103,   104,   105,    52,    92,    93,
-     106,    54,   107,   108,   109,    95,   110,   111,   112,   113,
-     114,   115,   116,    -8,    -8,    -8,    -8,    -8,   117,   118,
-     119,    -8,    -8,   120,   121,   122,   128,   129,   133,   134,
-     135,   136,   137,   138,   123,   124,   139,   140,   141,   142,
-      -8,    -8,    -8,    -8,    -8,    -8,    -8,    -8,   143,   144,
-      -8,    -8,    -8,    -8,   125,   126,    -8,    -8
+      -9,    43,    -8,    -9,    59,    45,    50,    55,    65,    70,
+      98,   104,   111,   112,   113,   114,   115,   116,   117,   118,
+     119,   120,   121,   122,    36,    41,    46,    51,    56,    61,
+      -9,    -9,    66,   123,   124,   125,   126,   127,    -9,    -9,
+      21,    39,    89,    -9,    71,    87,    91,    93,    95,    96,
+      97,    99,   100,   101,   102,   103,   105,   106,   107,   108,
+     109,   110,   128,   129,    -9,    -9,    -9,    -9,    -9,    -9,
+      -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,
+      -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,
+      -9,    -9,    -9,    -9,   130,   131,   132,    -9,    -9,    -9,
+      -9,    -9,    -9,    -9,   133,   135,   137,   141,   147,   154,
+     155,   156,   157,   158,   159,    74,    85,   134,   160,    78,
+     161,   162,   163,   136,   138,    31,   140,   142,   143,   144,
+     145,   146,   148,   149,    -9,    -9,    -9,    -9,    -9,    -9,
+     164,   165,   150,    -9,    -9,    -9,   151,   152,   153,   166,
+     167,    -9,    -9,    -9,    -9,    -9,   168,   169,   170,   176,
+     177,   179,   181,   184,    57,    60,    80,    82,    84,    86,
+      62,    64,    -9,    -9,    -9,    -9,    -9,    -9,    -9,    -9,
+      88,    -9,    90,    -9,    -9,    -9,    -9,    -9,    -9,    -9,
+      -9,    -9,    92,    -9,    94,    -9,   171,   172,   173,   174,
+     175,   178,   180,   182,    -9,    -9,    -9,    -9,    -9,    -9,
+      -9,    -9
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -619,34 +641,40 @@ static const yytype_int16 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       3,     0,     2,     1,     5,     0,     0,     0,     0,     0,
+       3,     0,     2,     1,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-      52,    53,    54,     0,     0,     0,     0,     4,     6,     0,
+      69,    70,    71,     0,     0,     0,     0,     0,     8,     4,
+       0,     0,     0,     9,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,    31,    29,
-      30,    28,    35,    33,    34,    32,    39,    37,    38,    36,
-      43,    41,    42,    40,    47,    45,    46,    44,    51,    49,
-      50,    48,    55,    56,    57,    58,     0,     0,     0,     0,
+       0,     0,     0,     0,    48,    46,    47,    45,    52,    50,
+      51,    49,    56,    54,    55,    53,    60,    58,    59,    57,
+      64,    62,    63,    61,    68,    66,    67,    65,    73,    75,
+      74,    72,    76,    77,     0,     0,     0,     5,     6,     7,
+      11,    13,    12,    10,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,    15,    16,    17,    19,    18,     0,     0,
-       0,    23,    24,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,    22,    23,    24,    26,    25,    27,
+       0,     0,     0,    36,    37,    38,     0,     0,     0,     0,
+       0,    85,    87,    86,    84,    88,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       7,     8,     9,    10,    11,    12,    13,    14,     0,     0,
-      22,    25,    26,    27,     0,     0,    20,    21
+       0,     0,    14,    15,    16,    17,    18,    19,    20,    21,
+       0,    30,     0,    33,    34,    35,    39,    40,    41,    42,
+      43,    44,     0,    83,     0,    80,     0,     0,     0,     0,
+       0,     0,     0,     0,    28,    29,    31,    32,    81,    82,
+      78,    79
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -8,    -8,    -8,    -8,    -8
+      -9,    -9,    -9,    -9,    -9,    -9,    -9
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     1,     2,    37,    38
+       0,     1,     2,    39,    40,    41,    42
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -657,85 +685,111 @@ static const yytype_uint8 yytable[] =
        4,     5,     6,     7,     8,     9,    10,    11,    12,    13,
       14,    15,    16,    17,    18,    19,    20,    21,    22,    23,
       24,    25,    26,    27,    28,    29,    30,    31,    32,    33,
-      34,    35,    36,    58,    59,    60,    61,    62,    63,    64,
-      65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
-      75,    76,    77,    78,    79,    80,    81,   116,   117,   121,
-     122,     3,    39,    40,    86,    41,    42,    43,    44,    45,
-      46,    47,    48,    49,    50,    51,    52,    53,    54,    55,
-      56,    57,    82,    83,    84,    85,    87,    88,    89,     0,
-      90,    91,     0,    92,   105,    93,    94,    95,    96,   106,
-     107,   108,   109,   110,   111,   112,   113,   114,   115,   120,
-     123,   124,   125,     0,     0,     0,     0,     0,     0,     0,
-     134,   135,     0,    97,    98,    99,   100,   101,   102,   103,
-     104,   140,   141,   118,   119,   126,   142,   143,   144,   145,
-     146,   147,     0,     0,   150,   151,   152,   153,   154,   155,
-     127,   128,   129,   130,   131,   132,   133,     0,     0,   136,
-     137,   138,   139,     0,     0,   148,   149,     0,   156,   157
+      34,    35,    36,    37,    38,   151,   152,   153,   154,   155,
+      64,    65,    66,     3,    67,    68,    69,    70,    45,    71,
+      72,    73,    74,    46,    75,    76,    77,    78,    47,    79,
+      80,    81,    82,    97,    83,    84,    85,    86,    48,    87,
+      88,    89,    90,    49,    91,   100,   101,   102,   103,   137,
+     138,    98,   139,   143,   144,   184,   145,   186,   185,   188,
+     187,   190,   189,   196,   191,   198,   197,   200,   199,   202,
+     201,    50,   203,    43,    44,   180,   181,    51,   182,   183,
+     192,   193,   194,   195,    52,    53,    54,    55,    56,    57,
+      58,    59,    60,    61,    62,    63,    92,    93,    94,    95,
+      96,    99,   140,   104,     0,     0,   126,   105,   127,   106,
+     128,   107,   108,   109,   129,   110,   111,   112,   113,   114,
+     130,   115,   116,   117,   118,   119,   120,   131,   132,   133,
+     134,   135,   136,   142,   146,   147,   148,   164,   165,   170,
+     171,   172,   173,   174,   121,   122,   123,   124,   125,   175,
+     176,   141,   177,   149,   178,   150,   156,   179,   157,   158,
+     159,   160,   161,     0,   162,   163,   166,   167,   168,   169,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+     204,   205,   206,   207,   208,     0,     0,   209,     0,   210,
+       0,   211
 };
 
 static const yytype_int8 yycheck[] =
 {
-       7,     8,     9,    10,    11,    12,    13,    14,    15,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    29,    30,    31,    32,    33,    34,    35,    36,
-      37,    38,    39,     4,     5,     6,     7,     4,     5,     6,
-       7,     4,     5,     6,     7,     4,     5,     6,     7,     4,
-       5,     6,     7,     4,     5,     6,     7,     5,     6,     5,
-       6,     0,     3,     3,    40,     3,     3,     3,     3,     3,
+       8,     9,    10,    11,    12,    13,    14,    15,    16,    17,
+      18,    19,    20,    21,    22,    23,    24,    25,    26,    27,
+      28,    29,    30,    31,    32,    33,    34,    35,    36,    37,
+      38,    39,    40,    41,    42,     4,     5,     6,     7,     8,
+       4,     5,     6,     0,     8,     4,     5,     6,     3,     8,
+       4,     5,     6,     3,     8,     4,     5,     6,     3,     8,
+       4,     5,     6,    42,     8,     4,     5,     6,     3,     8,
+       4,     5,     6,     3,     8,     4,     5,     6,     7,     5,
+       6,    42,     8,     5,     6,     5,     8,     5,     8,     5,
+       8,     5,     8,     5,     8,     5,     8,     5,     8,     5,
+       8,     3,     8,    44,    45,    48,    49,     3,    48,    49,
+      48,    49,    48,    49,     3,     3,     3,     3,     3,     3,
        3,     3,     3,     3,     3,     3,     3,     3,     3,     3,
-       3,     3,     3,     3,     3,     3,    40,    40,    40,    -1,
-      40,    40,    -1,    40,     3,    40,    40,    40,    40,     3,
+       3,    42,    47,    46,    -1,    -1,     3,    46,     3,    46,
+       3,    46,    46,    46,     3,    46,    46,    46,    46,    46,
+       3,    46,    46,    46,    46,    46,    46,     3,     3,     3,
        3,     3,     3,     3,     3,     3,     3,     3,     3,     3,
-       3,     3,     3,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-       3,     3,    -1,    40,    40,    40,    40,    40,    40,    40,
-      40,     3,     3,    41,    41,    40,     3,     3,     3,     3,
-       3,     3,    -1,    -1,     5,     5,     5,     5,     5,     5,
-      40,    40,    40,    40,    40,    40,    40,    -1,    -1,    40,
-      40,    40,    40,    -1,    -1,    42,    42,    -1,    43,    43
+       3,     3,     3,     3,    46,    46,    46,    46,    46,     3,
+       3,    47,     3,    47,     3,    47,    46,     3,    46,    46,
+      46,    46,    46,    -1,    46,    46,    46,    46,    46,    46,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      49,    49,    49,    49,    49,    -1,    -1,    49,    -1,    49,
+      -1,    49
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,    45,    46,     0,     7,     8,     9,    10,    11,    12,
-      13,    14,    15,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    29,    30,    31,    32,
-      33,    34,    35,    36,    37,    38,    39,    47,    48,     3,
+       0,    51,    52,     0,     8,     9,    10,    11,    12,    13,
+      14,    15,    16,    17,    18,    19,    20,    21,    22,    23,
+      24,    25,    26,    27,    28,    29,    30,    31,    32,    33,
+      34,    35,    36,    37,    38,    39,    40,    41,    42,    53,
+      54,    55,    56,    44,    45,     3,     3,     3,     3,     3,
        3,     3,     3,     3,     3,     3,     3,     3,     3,     3,
-       3,     3,     3,     3,     3,     3,     3,     3,     4,     5,
-       6,     7,     4,     5,     6,     7,     4,     5,     6,     7,
-       4,     5,     6,     7,     4,     5,     6,     7,     4,     5,
-       6,     7,     3,     3,     3,     3,    40,    40,    40,    40,
-      40,    40,    40,    40,    40,    40,    40,    40,    40,    40,
-      40,    40,    40,    40,    40,     3,     3,     3,     3,     3,
-       3,     3,     3,     3,     3,     3,     5,     6,    41,    41,
-       3,     5,     6,     3,     3,     3,    40,    40,    40,    40,
-      40,    40,    40,    40,     3,     3,    40,    40,    40,    40,
-       3,     3,     3,     3,     3,     3,     3,     3,    42,    42,
-       5,     5,     5,     5,     5,     5,    43,    43
+       3,     3,     3,     3,     4,     5,     6,     8,     4,     5,
+       6,     8,     4,     5,     6,     8,     4,     5,     6,     8,
+       4,     5,     6,     8,     4,     5,     6,     8,     4,     5,
+       6,     8,     3,     3,     3,     3,     3,    42,    42,    42,
+       4,     5,     6,     7,    46,    46,    46,    46,    46,    46,
+      46,    46,    46,    46,    46,    46,    46,    46,    46,    46,
+      46,    46,    46,    46,    46,    46,     3,     3,     3,     3,
+       3,     3,     3,     3,     3,     3,     3,     5,     6,     8,
+      47,    47,     3,     5,     6,     8,     3,     3,     3,    47,
+      47,     4,     5,     6,     7,     8,    46,    46,    46,    46,
+      46,    46,    46,    46,     3,     3,    46,    46,    46,    46,
+       3,     3,     3,     3,     3,     3,     3,     3,     3,     3,
+      48,    49,    48,    49,     5,     8,     5,     8,     5,     8,
+       5,     8,    48,    49,    48,    49,     5,     8,     5,     8,
+       5,     8,     5,     8,    49,    49,    49,    49,    49,    49,
+      49,    49
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    44,    45,    46,    46,    47,    47,    48,    48,    48,
-      48,    48,    48,    48,    48,    48,    48,    48,    48,    48,
-      48,    48,    48,    48,    48,    48,    48,    48,    48,    48,
-      48,    48,    48,    48,    48,    48,    48,    48,    48,    48,
-      48,    48,    48,    48,    48,    48,    48,    48,    48,    48,
-      48,    48,    48,    48,    48,    48,    48,    48,    48
+       0,    50,    51,    52,    52,    53,    53,    53,    53,    54,
+      55,    55,    55,    55,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     1,     0,     2,     1,     1,     6,     6,     6,
-       6,     6,     6,     6,     6,     4,     4,     4,     4,     4,
-       8,     8,     6,     4,     4,     6,     6,     6,     2,     2,
+       0,     2,     1,     0,     2,     2,     2,     2,     1,     2,
+       3,     3,     3,     3,     6,     6,     6,     6,     6,     6,
+       6,     6,     4,     4,     4,     4,     4,     4,     8,     8,
+       6,     8,     8,     6,     6,     6,     4,     4,     4,     6,
+       6,     6,     6,     6,     6,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     1,     1,     1,     2,     2,     2,     2
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     1,
+       1,     1,     2,     2,     2,     2,     2,     2,     8,     8,
+       6,     8,     8,     6,     4,     4,     4,     4,     4
 };
 
 
@@ -1198,329 +1252,507 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 5: /* line: LABEL  */
-#line 43 "src/tools/assembler/parser.y"
-          { 
-      insert_label((yyvsp[0].label).name, (yyvsp[0].label).addr); 
-      free((yyvsp[0].label).name);
-    }
-#line 1208 "parser.tab.c"
-    break;
-
-  case 7: /* instruction: ADD REG ',' REG ',' REG  */
-#line 51 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(0, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1214 "parser.tab.c"
-    break;
-
-  case 8: /* instruction: SUB REG ',' REG ',' REG  */
-#line 52 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(1, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1220 "parser.tab.c"
-    break;
-
-  case 9: /* instruction: AND REG ',' REG ',' REG  */
-#line 53 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(2, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1226 "parser.tab.c"
-    break;
-
-  case 10: /* instruction: OR REG ',' REG ',' REG  */
-#line 54 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(3, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1232 "parser.tab.c"
-    break;
-
-  case 11: /* instruction: XOR REG ',' REG ',' REG  */
-#line 55 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(4, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1238 "parser.tab.c"
-    break;
-
-  case 12: /* instruction: SHL REG ',' REG ',' REG  */
-#line 56 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(5, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1244 "parser.tab.c"
-    break;
-
-  case 13: /* instruction: SHR REG ',' REG ',' REG  */
-#line 57 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(6, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
-#line 1250 "parser.tab.c"
-    break;
-
-  case 14: /* instruction: SRA REG ',' REG ',' REG  */
-#line 58 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(6, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 1); }
-#line 1256 "parser.tab.c"
-    break;
-
-  case 15: /* instruction: MOV REG ',' REG  */
-#line 60 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(7, (yyvsp[-2].reg), (yyvsp[0].reg), 0, 0); }
-#line 1262 "parser.tab.c"
-    break;
-
-  case 16: /* instruction: CMP REG ',' REG  */
-#line 61 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(7, (yyvsp[-2].reg), (yyvsp[0].reg), 0, 1); }
-#line 1268 "parser.tab.c"
-    break;
-
-  case 17: /* instruction: NOT REG ',' REG  */
-#line 62 "src/tools/assembler/parser.y"
-                                        { emit_reg_format(7, (yyvsp[-2].reg), (yyvsp[0].reg), 0, 2); }
-#line 1274 "parser.tab.c"
-    break;
-
-  case 18: /* instruction: LDI REG ',' IMM8  */
-#line 64 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(8, (yyvsp[-2].reg), 0, (yyvsp[0].num)); }
-#line 1280 "parser.tab.c"
-    break;
-
-  case 19: /* instruction: LDI REG ',' IMM5  */
-#line 65 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(8, (yyvsp[-2].reg), 0, (yyvsp[0].num)); }
-#line 1286 "parser.tab.c"
-    break;
-
-  case 20: /* instruction: LD REG ',' '[' REG '+' IMM5 ']'  */
-#line 66 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(9, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].num)); }
-#line 1292 "parser.tab.c"
-    break;
-
-  case 21: /* instruction: ST REG ',' '[' REG '+' IMM5 ']'  */
-#line 67 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(10, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].num)); }
-#line 1298 "parser.tab.c"
-    break;
-
-  case 22: /* instruction: ADDI REG ',' REG ',' IMM5  */
-#line 68 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(11, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num)); }
-#line 1304 "parser.tab.c"
-    break;
-
-  case 23: /* instruction: LUI REG ',' IMM5  */
-#line 69 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(12, (yyvsp[-2].reg), 0, (yyvsp[0].num)); }
-#line 1310 "parser.tab.c"
-    break;
-
-  case 24: /* instruction: LUI REG ',' IMM8  */
+  case 9: /* label_def: IDENTIFIER ':'  */
 #line 70 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(12, (yyvsp[-2].reg), 0, (yyvsp[0].num)); }
-#line 1316 "parser.tab.c"
+                                        { insert_symbol((yyvsp[-1].label).name, (yyvsp[-1].label).addr, 0); free((yyvsp[-1].label).name); }
+#line 1259 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 25: /* instruction: ANDI REG ',' REG ',' IMM5  */
-#line 71 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(13, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num)); }
-#line 1322 "parser.tab.c"
+  case 10: /* assignment: IDENTIFIER '=' IMM16  */
+#line 74 "src/tools/assembler/parser.y"
+                                        { insert_symbol((yyvsp[-2].label).name, ((uint16_t)(yyvsp[0].imm16).upper << 8) | (yyvsp[0].imm16).lower, 1); free((yyvsp[-2].label).name); }
+#line 1265 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 26: /* instruction: ORI REG ',' REG ',' IMM5  */
-#line 72 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(14, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num)); }
-#line 1328 "parser.tab.c"
-    break;
-
-  case 27: /* instruction: XORI REG ',' REG ',' IMM5  */
-#line 73 "src/tools/assembler/parser.y"
-                                        { emit_imm_format(15, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num)); }
-#line 1334 "parser.tab.c"
-    break;
-
-  case 28: /* instruction: JMP LABEL  */
+  case 11: /* assignment: IDENTIFIER '=' OFFSET  */
 #line 75 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x10, (yyvsp[0].label)); free((yyvsp[0].label)); }
-#line 1340 "parser.tab.c"
+                                        { insert_symbol((yyvsp[-2].label).name, (yyvsp[0].num), 1); free((yyvsp[-2].label).name); }
+#line 1271 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 29: /* instruction: JMP IMM5  */
+  case 12: /* assignment: IDENTIFIER '=' IMM8  */
 #line 76 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x10, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1346 "parser.tab.c"
+                                        { insert_symbol((yyvsp[-2].label).name, (yyvsp[0].num), 1); free((yyvsp[-2].label).name); }
+#line 1277 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 30: /* instruction: JMP IMM8  */
+  case 13: /* assignment: IDENTIFIER '=' IMM5  */
 #line 77 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x10, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1352 "parser.tab.c"
+                                        { insert_symbol((yyvsp[-2].label).name, (yyvsp[0].num), 1); free((yyvsp[-2].label).name); }
+#line 1283 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 31: /* instruction: JMP OFFSET  */
-#line 78 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x10, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1358 "parser.tab.c"
-    break;
-
-  case 32: /* instruction: JEQ LABEL  */
-#line 79 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x11, (yyvsp[0].label)); free((yyvsp[0].label)); }
-#line 1364 "parser.tab.c"
-    break;
-
-  case 33: /* instruction: JEQ IMM5  */
-#line 80 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x11, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1370 "parser.tab.c"
-    break;
-
-  case 34: /* instruction: JEQ IMM8  */
+  case 14: /* instruction: ADD REG ',' REG ',' REG  */
 #line 81 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x11, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1376 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00000, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1289 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 35: /* instruction: JEQ OFFSET  */
+  case 15: /* instruction: SUB REG ',' REG ',' REG  */
 #line 82 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x11, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1382 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00001, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1295 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 36: /* instruction: JNE LABEL  */
+  case 16: /* instruction: AND REG ',' REG ',' REG  */
 #line 83 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x12, (yyvsp[0].label)); free((yyvsp[0].label)); }
-#line 1388 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00010, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1301 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 37: /* instruction: JNE IMM5  */
+  case 17: /* instruction: OR REG ',' REG ',' REG  */
 #line 84 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x12, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1394 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00011, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1307 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 38: /* instruction: JNE IMM8  */
+  case 18: /* instruction: XOR REG ',' REG ',' REG  */
 #line 85 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x12, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1400 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00100, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1313 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 39: /* instruction: JNE OFFSET  */
+  case 19: /* instruction: SHL REG ',' REG ',' REG  */
 #line 86 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x12, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1406 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00101, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1319 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 40: /* instruction: JGT LABEL  */
+  case 20: /* instruction: SHR REG ',' REG ',' REG  */
 #line 87 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x13, (yyvsp[0].label)); free((yyvsp[0].label)); }
-#line 1412 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00110, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 0); }
+#line 1325 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 41: /* instruction: JGT IMM5  */
+  case 21: /* instruction: SRA REG ',' REG ',' REG  */
 #line 88 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x13, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1418 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-5].pc), 0b00110, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].reg), 1); }
+#line 1331 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 42: /* instruction: JGT IMM8  */
+  case 22: /* instruction: MOV REG ',' REG  */
 #line 89 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x13, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1424 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-3].pc), 0b00111, (yyvsp[-2].reg), (yyvsp[0].reg), 0, 0); }
+#line 1337 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 43: /* instruction: JGT OFFSET  */
+  case 23: /* instruction: CMP REG ',' REG  */
 #line 90 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x13, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1430 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-3].pc), 0b00111, (yyvsp[-2].reg), (yyvsp[0].reg), 0, 1); }
+#line 1343 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 44: /* instruction: JLT LABEL  */
+  case 24: /* instruction: NOT REG ',' REG  */
 #line 91 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x14, (yyvsp[0].label)); free((yyvsp[0].label)); }
-#line 1436 "parser.tab.c"
+                                                    { emit_reg_format((yyvsp[-3].pc), 0b00111, (yyvsp[-2].reg), (yyvsp[0].reg), 0, 2); }
+#line 1349 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 45: /* instruction: JLT IMM5  */
-#line 92 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x14, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1442 "parser.tab.c"
-    break;
-
-  case 46: /* instruction: JLT IMM8  */
+  case 25: /* instruction: LDI REG ',' IMM8  */
 #line 93 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x14, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1448 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].num), yylineno); }
+#line 1355 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 47: /* instruction: JLT OFFSET  */
+  case 26: /* instruction: LDI REG ',' IMM5  */
 #line 94 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x14, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1454 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].num), yylineno); }
+#line 1361 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 48: /* instruction: JSR LABEL  */
+  case 27: /* instruction: LDI REG ',' IDENTIFIER  */
 #line 95 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x15, (yyvsp[0].label)); free((yyvsp[0].label)); }
-#line 1460 "parser.tab.c"
+                                                    { emit_imm_format_identifier((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].label).name, yylineno); }
+#line 1367 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 49: /* instruction: JSR IMM5  */
+  case 28: /* instruction: LDW REG ',' '[' REG '+' IMM5 ']'  */
 #line 96 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x15, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1466 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-7].pc), 0b01001, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].num), yylineno); }
+#line 1373 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 50: /* instruction: JSR IMM8  */
+  case 29: /* instruction: LDW REG ',' '[' REG '+' IDENTIFIER ']'  */
 #line 97 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x15, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1472 "parser.tab.c"
+                                                    { emit_imm_format_identifier((yyvsp[-7].pc), 0b01001, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].label).name, yylineno); }
+#line 1379 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 51: /* instruction: JSR OFFSET  */
+  case 30: /* instruction: LDW REG ',' '[' REG ']'  */
 #line 98 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x15, (yyvsp[0].num)); free((yyvsp[0].num)); }
-#line 1478 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-5].pc), 0b01001, (yyvsp[-4].reg), (yyvsp[-1].reg), 0, yylineno); }
+#line 1385 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 52: /* instruction: RET  */
+  case 31: /* instruction: STW REG ',' '[' REG '+' IMM5 ']'  */
 #line 99 "src/tools/assembler/parser.y"
-                                        { emit_jb_format(0x16, 0); }
-#line 1484 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-7].pc), 0b01010, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].num), yylineno); }
+#line 1391 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 53: /* instruction: HLT  */
+  case 32: /* instruction: STW REG ',' '[' REG '+' IDENTIFIER ']'  */
+#line 100 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_identifier((yyvsp[-7].pc), 0b01010, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].label).name, yylineno); }
+#line 1397 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 33: /* instruction: STW REG ',' '[' REG ']'  */
 #line 101 "src/tools/assembler/parser.y"
-                                        { emit_special_format(0x18, 0, 0); }
-#line 1490 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-5].pc), 0b01010, (yyvsp[-4].reg), (yyvsp[-1].reg), 0, yylineno); }
+#line 1403 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 54: /* instruction: NOP  */
+  case 34: /* instruction: ADDI REG ',' REG ',' IMM5  */
 #line 102 "src/tools/assembler/parser.y"
-                                        { emit_special_format(0x19, 0, 0); }
-#line 1496 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-5].pc), 0b01011, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num), yylineno); }
+#line 1409 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 55: /* instruction: INC REG  */
+  case 35: /* instruction: ADDI REG ',' REG ',' IDENTIFIER  */
 #line 103 "src/tools/assembler/parser.y"
-                                        { emit_special_format(0x1A, (yyvsp[0].reg), 0); }
-#line 1502 "parser.tab.c"
+                                                    { emit_imm_format_identifier((yyvsp[-5].pc), 0b01011, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].label).name, yylineno); }
+#line 1415 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 56: /* instruction: DEC REG  */
+  case 36: /* instruction: LUI REG ',' IMM5  */
 #line 104 "src/tools/assembler/parser.y"
-                                        { emit_special_format(0x1B, (yyvsp[0].reg), 0); }
-#line 1508 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-3].pc), 0b01100, (yyvsp[-2].reg), 0, (yyvsp[0].num), yylineno); }
+#line 1421 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 57: /* instruction: PUSH REG  */
+  case 37: /* instruction: LUI REG ',' IMM8  */
 #line 105 "src/tools/assembler/parser.y"
-                                        { emit_special_format(0x1C, (yyvsp[0].reg), 0); }
-#line 1514 "parser.tab.c"
+                                                    { emit_imm_format_with_line((yyvsp[-3].pc), 0b01100, (yyvsp[-2].reg), 0, (yyvsp[0].num), yylineno); }
+#line 1427 "src/tools/assembler/parser.tab.c"
     break;
 
-  case 58: /* instruction: POP REG  */
+  case 38: /* instruction: LUI REG ',' IDENTIFIER  */
 #line 106 "src/tools/assembler/parser.y"
-                                        { emit_special_format(0x1D, (yyvsp[0].reg), 0); }
-#line 1520 "parser.tab.c"
+                                                    { emit_imm_format_identifier((yyvsp[-3].pc), 0b01100, (yyvsp[-2].reg), 0, (yyvsp[0].label).name, yylineno); }
+#line 1433 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 39: /* instruction: ANDI REG ',' REG ',' IMM5  */
+#line 107 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_with_line((yyvsp[-5].pc), 0b01101, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num), yylineno); }
+#line 1439 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 40: /* instruction: ANDI REG ',' REG ',' IDENTIFIER  */
+#line 108 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_identifier((yyvsp[-5].pc), 0b01101, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].label).name, yylineno); }
+#line 1445 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 41: /* instruction: ORI REG ',' REG ',' IMM5  */
+#line 109 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_with_line((yyvsp[-5].pc), 0b01110, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num), yylineno); }
+#line 1451 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 42: /* instruction: ORI REG ',' REG ',' IDENTIFIER  */
+#line 110 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_identifier((yyvsp[-5].pc), 0b01110, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].label).name, yylineno); }
+#line 1457 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 43: /* instruction: XORI REG ',' REG ',' IMM5  */
+#line 111 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_with_line((yyvsp[-5].pc), 0b01111, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].num), yylineno); }
+#line 1463 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 44: /* instruction: XORI REG ',' REG ',' IDENTIFIER  */
+#line 112 "src/tools/assembler/parser.y"
+                                                    { emit_imm_format_identifier((yyvsp[-5].pc), 0b01111, (yyvsp[-4].reg), (yyvsp[-2].reg), (yyvsp[0].label).name, yylineno); }
+#line 1469 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 45: /* instruction: JMP IDENTIFIER  */
+#line 114 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_identifier((yyvsp[-1].pc), 0b10000, (yyvsp[0].label).name); }
+#line 1475 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 46: /* instruction: JMP IMM5  */
+#line 115 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10000, (yyvsp[0].num)); }
+#line 1481 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 47: /* instruction: JMP IMM8  */
+#line 116 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10000, (yyvsp[0].num)); }
+#line 1487 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 48: /* instruction: JMP OFFSET  */
+#line 117 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10000, (yyvsp[0].num)); }
+#line 1493 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 49: /* instruction: JEQ IDENTIFIER  */
+#line 118 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_identifier((yyvsp[-1].pc), 0b10001, (yyvsp[0].label).name); }
+#line 1499 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 50: /* instruction: JEQ IMM5  */
+#line 119 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10001, (yyvsp[0].num)); }
+#line 1505 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 51: /* instruction: JEQ IMM8  */
+#line 120 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10001, (yyvsp[0].num)); }
+#line 1511 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 52: /* instruction: JEQ OFFSET  */
+#line 121 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10001, (yyvsp[0].num)); }
+#line 1517 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 53: /* instruction: JNE IDENTIFIER  */
+#line 122 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_identifier((yyvsp[-1].pc), 0b10010, (yyvsp[0].label).name); }
+#line 1523 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 54: /* instruction: JNE IMM5  */
+#line 123 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10010, (yyvsp[0].num)); }
+#line 1529 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 55: /* instruction: JNE IMM8  */
+#line 124 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10010, (yyvsp[0].num)); }
+#line 1535 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 56: /* instruction: JNE OFFSET  */
+#line 125 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10010, (yyvsp[0].num)); }
+#line 1541 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 57: /* instruction: JGT IDENTIFIER  */
+#line 126 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_identifier((yyvsp[-1].pc), 0b10011, (yyvsp[0].label).name); }
+#line 1547 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 58: /* instruction: JGT IMM5  */
+#line 127 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10011, (yyvsp[0].num)); }
+#line 1553 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 59: /* instruction: JGT IMM8  */
+#line 128 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10011, (yyvsp[0].num)); }
+#line 1559 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 60: /* instruction: JGT OFFSET  */
+#line 129 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10011, (yyvsp[0].num)); }
+#line 1565 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 61: /* instruction: JLT IDENTIFIER  */
+#line 130 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_identifier((yyvsp[-1].pc), 0b10100, (yyvsp[0].label).name); }
+#line 1571 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 62: /* instruction: JLT IMM5  */
+#line 131 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10100, (yyvsp[0].num)); }
+#line 1577 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 63: /* instruction: JLT IMM8  */
+#line 132 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10100, (yyvsp[0].num)); }
+#line 1583 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 64: /* instruction: JLT OFFSET  */
+#line 133 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10100, (yyvsp[0].num)); }
+#line 1589 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 65: /* instruction: JSR IDENTIFIER  */
+#line 134 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_identifier((yyvsp[-1].pc), 0b10101, (yyvsp[0].label).name); }
+#line 1595 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 66: /* instruction: JSR IMM5  */
+#line 135 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10101, (yyvsp[0].num)); }
+#line 1601 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 67: /* instruction: JSR IMM8  */
+#line 136 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10101, (yyvsp[0].num)); }
+#line 1607 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 68: /* instruction: JSR OFFSET  */
+#line 137 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[-1].pc), 0b10101, (yyvsp[0].num)); }
+#line 1613 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 69: /* instruction: RET  */
+#line 138 "src/tools/assembler/parser.y"
+                                                    { emit_jb_format_imm((yyvsp[0].pc), 0b10110, 0); }
+#line 1619 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 70: /* instruction: HLT  */
+#line 140 "src/tools/assembler/parser.y"
+                                                    { emit_special_format((yyvsp[0].pc), 0b11000, 0, 0, 0); }
+#line 1625 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 71: /* instruction: NOP  */
+#line 141 "src/tools/assembler/parser.y"
+                                                    { emit_special_format((yyvsp[0].pc), 0b11001, 0, 0, 0); }
+#line 1631 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 72: /* instruction: NOP IDENTIFIER  */
+#line 142 "src/tools/assembler/parser.y"
+                                                    { 
+                                                              sort_symbols();
+                                                              uint16_t value = get_symbol((yyvsp[0].label).name, NULL);
+                                                              for (int i = 0; i < value; i++) {
+                                                                emit_special_format((yyvsp[-1].pc) + (i * 2), 0b11001, 0, 0, 0);
+                                                              }
+                                                              free((yyvsp[0].label).name);
+                                                            }
+#line 1644 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 73: /* instruction: NOP OFFSET  */
+#line 150 "src/tools/assembler/parser.y"
+                                                    { 
+                                                              for (int i = 0; i < (yyvsp[0].num); i++) {
+                                                                emit_special_format((yyvsp[-1].pc) + (i * 2), 0b11001, 0, 0, 0);
+                                                              }
+                                                            }
+#line 1654 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 74: /* instruction: NOP IMM8  */
+#line 155 "src/tools/assembler/parser.y"
+                                                  { 
+                                                            for (int i = 0; i < (yyvsp[0].num); i++) {
+                                                              emit_special_format((yyvsp[-1].pc) + (i * 2), 0b11001, 0, 0, 0);
+                                                            }
+                                                          }
+#line 1664 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 75: /* instruction: NOP IMM5  */
+#line 160 "src/tools/assembler/parser.y"
+                                                  { 
+                                                            for (int i = 0; i < (yyvsp[0].num); i++) {
+                                                              emit_special_format((yyvsp[-1].pc) + (i * 2), 0b11001, 0, 0, 0);
+                                                            }
+                                                          }
+#line 1674 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 76: /* instruction: INC REG  */
+#line 166 "src/tools/assembler/parser.y"
+                                                  { emit_special_format((yyvsp[-1].pc), 0b11010, (yyvsp[0].reg), 0, 0); }
+#line 1680 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 77: /* instruction: DEC REG  */
+#line 167 "src/tools/assembler/parser.y"
+                                                  { emit_special_format((yyvsp[-1].pc), 0b11011, (yyvsp[0].reg), 0, 0); }
+#line 1686 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 78: /* instruction: STB REG ',' '[' REG '+' IMM5 ']'  */
+#line 168 "src/tools/assembler/parser.y"
+                                                  { emit_special_format((yyvsp[-7].pc), 0b11101, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].num)); }
+#line 1692 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 79: /* instruction: STB REG ',' '[' REG '+' IDENTIFIER ']'  */
+#line 169 "src/tools/assembler/parser.y"
+                                                  { emit_special_format_identifier((yyvsp[-7].pc), 0b11101, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].label).name, yylineno); }
+#line 1698 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 80: /* instruction: STB REG ',' '[' REG ']'  */
+#line 170 "src/tools/assembler/parser.y"
+                                                  { emit_special_format((yyvsp[-5].pc), 0b11101, (yyvsp[-4].reg), (yyvsp[-1].reg), 0); }
+#line 1704 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 81: /* instruction: LDB REG ',' '[' REG '+' IMM5 ']'  */
+#line 171 "src/tools/assembler/parser.y"
+                                                  { emit_special_format((yyvsp[-7].pc), 0b11100, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].num)); }
+#line 1710 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 82: /* instruction: LDB REG ',' '[' REG '+' IDENTIFIER ']'  */
+#line 172 "src/tools/assembler/parser.y"
+                                                  { emit_special_format_identifier((yyvsp[-7].pc), 0b11100, (yyvsp[-6].reg), (yyvsp[-3].reg), (yyvsp[-1].label).name, yylineno); }
+#line 1716 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 83: /* instruction: LDB REG ',' '[' REG ']'  */
+#line 173 "src/tools/assembler/parser.y"
+                                                  { emit_special_format((yyvsp[-5].pc), 0b11100, (yyvsp[-4].reg), (yyvsp[-1].reg), 0); }
+#line 1722 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 84: /* instruction: LOAD16 REG ',' IMM16  */
+#line 175 "src/tools/assembler/parser.y"
+                                                  { emit_imm_format_with_line((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].imm16).lower, yylineno); emit_imm_format_with_line((yyvsp[-3].pc) + 2, 0b01100, (yyvsp[-2].reg), 0, (yyvsp[0].imm16).upper, yylineno);}
+#line 1728 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 85: /* instruction: LOAD16 REG ',' OFFSET  */
+#line 176 "src/tools/assembler/parser.y"
+                                                  { emit_imm_format_with_line((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].num) & 0xFF, yylineno); emit_imm_format_with_line((yyvsp[-3].pc) + 2, 0b01100, (yyvsp[-2].reg), 0, (yyvsp[0].num) >> 8, yylineno);}
+#line 1734 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 86: /* instruction: LOAD16 REG ',' IMM8  */
+#line 177 "src/tools/assembler/parser.y"
+                                                  { emit_imm_format_with_line((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].num), yylineno); emit_imm_format_with_line((yyvsp[-3].pc) + 2, 0b01100, (yyvsp[-2].reg), 0, 0, yylineno);}
+#line 1740 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 87: /* instruction: LOAD16 REG ',' IMM5  */
+#line 178 "src/tools/assembler/parser.y"
+                                                  { emit_imm_format_with_line((yyvsp[-3].pc), 0b01000, (yyvsp[-2].reg), 0, (yyvsp[0].num), yylineno); emit_imm_format_with_line((yyvsp[-3].pc) + 2, 0b01100, (yyvsp[-2].reg), 0, 0, yylineno);}
+#line 1746 "src/tools/assembler/parser.tab.c"
+    break;
+
+  case 88: /* instruction: LOAD16 REG ',' IDENTIFIER  */
+#line 179 "src/tools/assembler/parser.y"
+                                                  { emit_load16_identifier((yyvsp[-3].pc), (yyvsp[-2].reg), (yyvsp[0].label).name, yylineno); }
+#line 1752 "src/tools/assembler/parser.tab.c"
     break;
 
 
-#line 1524 "parser.tab.c"
+#line 1756 "src/tools/assembler/parser.tab.c"
 
       default: break;
     }
@@ -1713,9 +1945,10 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 109 "src/tools/assembler/parser.y"
+#line 182 "src/tools/assembler/parser.y"
 
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Invalid instruction at line %d: %s\n", yylineno, s);
+    fprintf(stderr, "Error at line %d: %s\n", yylineno, s);
+    fprintf(stderr, "Invalid token: %s\n", current_token);
 }

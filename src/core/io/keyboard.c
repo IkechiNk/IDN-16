@@ -1,5 +1,5 @@
-#include "keyboard.h"
-#include "core/memory.h"
+#include "idn16/io/keyboard.h"
+#include "idn16/memory.h"
 
 const uint8_t* keys; 
 SDL_Event e;

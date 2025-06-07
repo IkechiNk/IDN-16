@@ -1,6 +1,6 @@
-#include "codegen.h"
-#include "symbol_table.h"
-#include "../../core/instructions.h"
+#include "idn16/codegen.h"
+#include "idn16/symbol_table.h"
+#include "idn16/instructions.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

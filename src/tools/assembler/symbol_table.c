@@ -1,4 +1,4 @@
-#include "symbol_table.h"
+#include "idn16/symbol_table.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

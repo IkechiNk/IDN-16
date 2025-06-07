@@ -1,5 +1,5 @@
-#include "Unity/unity.h"
-#include "../tools/assembler/symbol_table.h"
+#include "../unity/unity.h"
+#include "idn16/symbol_table.h"
 #include <string.h>
 
 void setUp(void) {

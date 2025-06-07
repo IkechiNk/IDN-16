@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "cpu.h"
-#include "IO/display.h"
-#include "IO/keyboard.h"
+#include "idn16/cpu.h"
+#include "idn16/io/display.h"
+#include "idn16/io/keyboard.h"
 
 // Interrupt types
 #define DISPLAY_INTERRUPT 0x1

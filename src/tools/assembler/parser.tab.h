@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_YY_PARSER_TAB_H_INCLUDED
-# define YY_YY_PARSER_TAB_H_INCLUDED
+#ifndef YY_YY_SRC_TOOLS_ASSEMBLER_PARSER_TAB_H_INCLUDED
+# define YY_YY_SRC_TOOLS_ASSEMBLER_PARSER_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -58,39 +58,43 @@ extern int yydebug;
     OFFSET = 259,                  /* OFFSET  */
     IMM5 = 260,                    /* IMM5  */
     IMM8 = 261,                    /* IMM8  */
-    LABEL = 262,                   /* LABEL  */
-    ADD = 263,                     /* ADD  */
-    SUB = 264,                     /* SUB  */
-    AND = 265,                     /* AND  */
-    OR = 266,                      /* OR  */
-    XOR = 267,                     /* XOR  */
-    SHL = 268,                     /* SHL  */
-    SHR = 269,                     /* SHR  */
-    SRA = 270,                     /* SRA  */
-    MOV = 271,                     /* MOV  */
-    CMP = 272,                     /* CMP  */
-    NOT = 273,                     /* NOT  */
-    LDI = 274,                     /* LDI  */
-    LD = 275,                      /* LD  */
-    ST = 276,                      /* ST  */
-    ADDI = 277,                    /* ADDI  */
-    LUI = 278,                     /* LUI  */
-    ANDI = 279,                    /* ANDI  */
-    ORI = 280,                     /* ORI  */
-    XORI = 281,                    /* XORI  */
-    JMP = 282,                     /* JMP  */
-    JEQ = 283,                     /* JEQ  */
-    JNE = 284,                     /* JNE  */
-    JGT = 285,                     /* JGT  */
-    JLT = 286,                     /* JLT  */
-    JSR = 287,                     /* JSR  */
-    RET = 288,                     /* RET  */
-    HLT = 289,                     /* HLT  */
-    NOP = 290,                     /* NOP  */
-    INC = 291,                     /* INC  */
-    DEC = 292,                     /* DEC  */
-    PUSH = 293,                    /* PUSH  */
-    POP = 294                      /* POP  */
+    IMM16 = 262,                   /* IMM16  */
+    IDENTIFIER = 263,              /* IDENTIFIER  */
+    ADD = 264,                     /* ADD  */
+    SUB = 265,                     /* SUB  */
+    AND = 266,                     /* AND  */
+    OR = 267,                      /* OR  */
+    XOR = 268,                     /* XOR  */
+    SHL = 269,                     /* SHL  */
+    SHR = 270,                     /* SHR  */
+    SRA = 271,                     /* SRA  */
+    MOV = 272,                     /* MOV  */
+    CMP = 273,                     /* CMP  */
+    NOT = 274,                     /* NOT  */
+    LDI = 275,                     /* LDI  */
+    LDW = 276,                     /* LDW  */
+    STW = 277,                     /* STW  */
+    ADDI = 278,                    /* ADDI  */
+    LUI = 279,                     /* LUI  */
+    ANDI = 280,                    /* ANDI  */
+    ORI = 281,                     /* ORI  */
+    XORI = 282,                    /* XORI  */
+    JMP = 283,                     /* JMP  */
+    JEQ = 284,                     /* JEQ  */
+    JNE = 285,                     /* JNE  */
+    JGT = 286,                     /* JGT  */
+    JLT = 287,                     /* JLT  */
+    JSR = 288,                     /* JSR  */
+    RET = 289,                     /* RET  */
+    HLT = 290,                     /* HLT  */
+    NOP = 291,                     /* NOP  */
+    INC = 292,                     /* INC  */
+    DEC = 293,                     /* DEC  */
+    LDB = 294,                     /* LDB  */
+    STB = 295,                     /* STB  */
+    LOAD16 = 296,                  /* LOAD16  */
+    NEWLINE = 297,                 /* NEWLINE  */
+    EMPTY = 298                    /* EMPTY  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -99,13 +103,23 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 14 "src/tools/assembler/parser.y"
+#line 18 "src/tools/assembler/parser.y"
 
     int reg;
     uint16_t num;
-    char* label;
+    uint16_t pc;
 
-#line 109 "parser.tab.h"
+    struct {
+      uint8_t lower;
+      uint8_t upper;
+    } imm16;
+    
+    struct {
+      char* name;
+      int addr;
+    } label;
+
+#line 123 "src/tools/assembler/parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -120,4 +134,4 @@ extern YYSTYPE yylval;
 int yyparse (void);
 
 
-#endif /* !YY_YY_PARSER_TAB_H_INCLUDED  */
+#endif /* !YY_YY_SRC_TOOLS_ASSEMBLER_PARSER_TAB_H_INCLUDED  */

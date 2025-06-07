@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "dasm.h"
+#include "idn16/dasm.h"
 
 #define MAX_BYTES 65536  // Maximum file size (64KB)
 

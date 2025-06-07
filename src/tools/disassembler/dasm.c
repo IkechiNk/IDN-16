@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "dasm.h"
+#include "idn16/dasm.h"
 
 static int pc = 0;
 
