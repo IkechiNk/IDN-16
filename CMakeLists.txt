@@ -32,7 +32,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL2_image)
 
-add_executable(IDN-16 main.c)
+add_executable(IDN-16 src/main.c)
 
 target_compile_options(IDN-16 PUBLIC)
 target_include_directories(IDN-16 PUBLIC .)
@@ -54,6 +54,6 @@ endif()
 add_custom_command(
     TARGET IDN-16 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    ${CMAKE_CURRENT_BINARY_DIR}/resources
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts
+    ${CMAKE_CURRENT_BINARY_DIR}/resources/fonts
 )
