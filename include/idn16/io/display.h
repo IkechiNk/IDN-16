@@ -1,16 +1,17 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
 
 typedef struct  {
     int width;
     int height;
-    SDL_Window* window;
+    int scale;
     SDL_Renderer* renderer;
     SDL_Texture* texture;
+    uint8_t* memory;
     uint16_t* pixels;
     
     // Tile cache for fast rendering
@@ -27,7 +28,7 @@ typedef struct  {
  * Initializes the display with the given width and height.
  * Returns a pointer to the display structure.
  */
-display_t* display_init(int width, int height, int scale);
+display_t* display_init(int width, int height, int scale, uint8_t memory[], SDL_Renderer *renderer);
 
 /*
  * Destroys the display and frees the allocated resources.
@@ -37,22 +38,22 @@ void display_destroy(display_t *display);
 /*
  * Updates the screen with the newest pixel information.
  */
-void display_update(display_t *display, uint8_t memory[]);
+void display_update(display_t *display, SDL_FRect *where);
 
 /*
  * Render based on current video mode
  */
-void render_text_mode(display_t* display, uint8_t memory[]);
-void render_tile_mode(display_t* display, uint8_t memory[]);
-void render_mixed_mode(display_t* display, uint8_t memory[]);
+void render_text_mode(display_t* display);
+void render_tile_mode(display_t* display);
+void render_mixed_mode(display_t* display);
 
 /*
  * Helper functions
  */
-void render_tile_to_buffer(display_t* display, uint8_t memory[], int tile_id, int screen_x, int screen_y);
-void render_sprite_to_buffer(display_t* display, uint8_t memory[], int sprite_index);
-void update_tile_cache(display_t* display, uint8_t memory[], int tile_id);
-uint16_t get_palette_color(uint8_t memory[], int palette_index);
+void render_tile_to_buffer(display_t* display, int tile_id, int screen_x, int screen_y);
+void render_sprite_to_buffer(display_t* display, int sprite_index);
+void update_tile_cache(display_t* display, int tile_id);
+uint16_t get_palette_color(display_t* display, int palette_index);
 
 /*
  * Utility functions

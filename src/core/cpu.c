@@ -7,6 +7,9 @@
 Cpu_t* cpu_init(void)
 {
     Cpu_t* cpu = malloc(sizeof(Cpu_t));
+    if (!cpu) {
+        return NULL;
+    }
     cpu->pc = 0;
     memset(cpu->r, 0, sizeof(cpu->r));
     memory_init(cpu->memory);
@@ -28,9 +31,9 @@ void cpu_destroy(Cpu_t* cpu) {
     }
 }
 
-void cpu_cycle(Cpu_t* cpu) {
+void cpu_cycle(Cpu_t* cpu, bool debug) {
     uint16_t inst = fetch(cpu);
-    printf("%u: %s\n", cpu->pc / 2, disassemble_word(inst));
+    if (debug) printf("%u: %s\n", cpu->pc / 2, disassemble_word(inst));
     execute(decode(inst), cpu);
 }
 

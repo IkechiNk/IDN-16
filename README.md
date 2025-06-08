@@ -1,6 +1,6 @@
 # `IDN-16` Console
 ## Table of Contents
-
+<!-- TODO: WHEN GETTING "{lib}.dll" is not a .so shared library, this problem is becuase cmake is returning the windows path to the libary.-->
 - [`IDN-16` Console](#idn-16-console)
   - [Table of Contents](#table-of-contents)
   - [About](#about)
@@ -66,7 +66,7 @@ You will need the following software installed:
 For Ubuntu/Debian, these can be installed by running the following:
 ```bash
 sudo apt update 
-sudo apt install build-essential libsdl2-dev libsdl2-ttf-dev flex bison git
+sudo apt install build-essential libsdl2-dev libsdl2-ttf-dev libtiff-dev libavif-dev libwebp-dev libjpeg-dev libpng-dev flex bison git
 ```
 
 Or use the provided makefile target:
