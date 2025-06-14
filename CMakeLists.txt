@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
@@ -64,9 +65,15 @@ set(CLAY_SOURCES
 	lib/clay/SDL3/clay_renderer_SDL3.c
 )
 
+# Clay UI source files
+set(SFD_SOURCES
+	lib/sfd/sfd.c
+)
+
 set(SOURCES 
 	src/main.c
 	${CORE_SOURCES}
+	${SFD_SOURCES}
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -75,6 +82,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE
 	include
 	lib/clay
+	lib/sfd
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

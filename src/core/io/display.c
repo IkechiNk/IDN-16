@@ -80,6 +80,8 @@ void display_destroy(display_t* display) {
 }
 
 void display_update(display_t* display, SDL_FRect *where) {
+    if (!display) return;
+    
     // Read video mode from memory
     uint8_t video_mode = memory_read_byte(display->memory, VIDEO_MODE_REG);
     
@@ -103,15 +105,8 @@ void display_update(display_t* display, SDL_FRect *where) {
             break;
     }
 
-    // Update texture and present
+    // Clay will handle the rendering
     SDL_UpdateTexture(display->texture, NULL, display->pixels, display->width * sizeof(uint16_t));
-    float scale_x_old;
-    float scale_y_old;
-    SDL_GetRenderScale(display->renderer, &scale_x_old, &scale_y_old);
-    
-    SDL_SetRenderScale(display->renderer, display->scale, display->scale);
-    SDL_RenderTexture(display->renderer, display->texture, NULL, where);
-    SDL_SetRenderScale(display->renderer, scale_x_old, scale_y_old);
     
     display->frames_rendered++;
 }
