@@ -1,4 +1,5 @@
 #include "idn16/instructions.h"
+#include "idn16/memory.h"
 
 uint16_t sign_extend_5(uint16_t imm) {
     if (imm >> 4) {
@@ -328,6 +329,16 @@ void jlt(uint16_t imm, Cpu_t *cpu) {
     }
 }
 void jsr(uint16_t imm, Cpu_t *cpu) {
+    uint16_t target_address = cpu->pc + (int)sign_extend_11(imm);
+    
+    // Check if this is a system call
+    if (target_address >= SYSCALL_BASE && target_address <= SYSCALL_END) {
+        handle_system_call(target_address, cpu);
+        cpu->pc += 2; // Move to next instruction
+        return;
+    }
+    
+    // Normal subroutine call
     cpu->r[7] = cpu->pc + (uint16_t)0b10;
     jmp(imm, cpu);
 }

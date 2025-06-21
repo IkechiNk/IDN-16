@@ -3,13 +3,14 @@
 
 // Memory regions configuration
 static const MemoryRegion memory_regions[REGION_COUNT] = {
-    {ROM_START, ROM_END, true, false, "User ROM"},
+    {USER_ROM_START, USER_ROM_END, true, false, "User ROM"},
+    {STACK_START, STACK_END, false, false, "Stack"},
     {RAM_START, RAM_END, false, false, "RAM"},
     {VIDEO_RAM_START, VIDEO_RAM_END, false, true, "Video Memory"},
     {AUDIO_REG_START, AUDIO_REG_END, false, true, "Audio Registers"},
     {INPUT_REG_START, INPUT_REG_END, false, true, "Input Registers"},
     {SYSTEM_CTRL_START, SYSTEM_CTRL_END, false, true, "System Control"},
-    {SYSTEM_ROM_START, SYSTEM_ROM_END, true, false, "System ROM"},
+    {SYSCALL_BASE, SYSCALL_END, true, false, "System Calls"},
 };
 
 static bool is_little_endian(void) {
@@ -17,9 +18,9 @@ static bool is_little_endian(void) {
     return *((uint8_t*)&value);
 }
 
-bool load_rom(uint8_t memory[], const char* rom) {
+bool load_user_rom(uint8_t memory[], const char* rom) {
     char full_rom_loc[14 + strlen(rom) + 1];
-    sprintf(full_rom_loc, "src/core/roms/%s", rom);
+    sprintf(full_rom_loc, "resources/roms/%s", rom);
     FILE* fRom = fopen(full_rom_loc, "rb");
     if (!fRom) {
         return false;
@@ -29,11 +30,11 @@ bool load_rom(uint8_t memory[], const char* rom) {
     size_t file_size = ftell(fRom);
     rewind(fRom);
     
-    // Read up to ROM size limit
-    size_t max_read = (ROM_END - ROM_START + 1); // 0x2000 bytes
+    // Read up to ROM size limit (32KB)
+    size_t max_read = (USER_ROM_END - USER_ROM_START + 1);
     size_t bytes_to_read = (file_size < max_read) ?  file_size : max_read;
     
-    fread(memory, 1, bytes_to_read, fRom);
+    fread(memory + USER_ROM_START, 1, bytes_to_read, fRom);
     fclose(fRom);
     return true;
 }
@@ -41,7 +42,6 @@ bool load_rom(uint8_t memory[], const char* rom) {
 void memory_init(uint8_t memory[]) {
     // Clear all memory
     memset(memory, 0, MEMORY_SIZE);
-    memset(memory, 0b11000, ROM_END - ROM_START + 1);
     
     // Initialize system control registers
     memory[SYSTEM_STATUS_REG] = 0x01; // System running
@@ -52,10 +52,10 @@ void memory_init(uint8_t memory[]) {
     initialize_default_palette(memory);
     initialize_default_tileset(memory);
     
-    // Load system ROM with built-in functions
-    load_system_rom(memory);
+    // Initialize stack pointer to top of stack
+    memory_write_word(memory, SYSTEM_CTRL_START + 10, STACK_END, true);
     
-    printf("IDN-16 System initialized\n");
+    printf("IDN-16 System initialized (simplified - no system ROM)\n");
 }
 
 void initialize_video_memory(uint8_t memory[]) {
@@ -112,73 +112,55 @@ void initialize_default_palette(uint8_t memory[]) {
 }
 
 void initialize_default_tileset(uint8_t memory[]) {
-    // Create simple default tiles
-    // Each tile is 8x8 pixels, but we'll store them as 32 bytes (8x8/2, 4 bits per pixel)
+    // Font tiles for ASCII characters 32-126 (95 characters total)
+    // Each tile is 8x8 pixels, stored as 32 bytes (4 bits per pixel)
     
-    // Tile 0: Empty (all zeros - already cleared)
+    // Simple font data - 8 bytes per character (1 bit per pixel, expanded to 4-bit)
+    // ASCII 32 (space) = Tile 0
+    create_font_tile(memory, 0, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
     
-    // Tile 1: Solid fill
-    for (int i = 0; i < 32; i++) {
-        memory_write_byte(memory, TILESET_DATA_START + 32 + i, 0x11, true);
+    // ASCII 33 (!) = Tile 1  
+    create_font_tile(memory, 1, (uint8_t[]){0x18, 0x18, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00});
+    
+    // ASCII 45 (-) = Tile 13
+    create_font_tile(memory, 13, (uint8_t[]){0x00, 0x00, 0x00, 0x7E, 0x00, 0x00, 0x00, 0x00});
+    
+    // ASCII 49 (1) = Tile 17
+    create_font_tile(memory, 17, (uint8_t[]){0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00});
+    
+    // ASCII 54 (6) = Tile 22  
+    create_font_tile(memory, 22, (uint8_t[]){0x3C, 0x60, 0x60, 0x7C, 0x66, 0x66, 0x3C, 0x00});
+    
+    // ASCII 68 (D) = Tile 36
+    create_font_tile(memory, 36, (uint8_t[]){0x7C, 0x66, 0x66, 0x66, 0x66, 0x66, 0x7C, 0x00});
+    
+    // ASCII 73 (I) = Tile 41
+    create_font_tile(memory, 41, (uint8_t[]){0x7E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00});
+    
+    // ASCII 78 (N) = Tile 46
+    create_font_tile(memory, 46, (uint8_t[]){0x66, 0x76, 0x7E, 0x6E, 0x66, 0x66, 0x66, 0x00});
+    
+    // Fill remaining tiles with a default pattern for unsupported characters
+    for (int i = 95; i < 256; i++) {
+        create_font_tile(memory, i, (uint8_t[]){0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF, 0x00});
     }
+}
+
+void create_font_tile(uint8_t memory[], int tile_id, uint8_t bitmap[8]) {
+    uint16_t tile_addr = TILESET_DATA_START + (tile_id * 32);
     
-    // Tile 2: Checkerboard
+    // Convert 1-bit bitmap to 4-bit tile data
     for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 4; x++) { // 4 bytes per row
-            uint8_t pattern = ((x + y) % 2) ? 0x12 : 0x21;
-            memory_write_byte(memory, TILESET_DATA_START + 64 + (y * 4) + x, pattern, true);
-        }
-    }
-    
-    // Tile 3: Border
-    for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 4; x++) {
-            uint8_t pattern = 0x00;
-            if (y == 0 || y == 7 || x == 0 || x == 3) {
-                pattern = 0x33;
-            }
-            memory_write_byte(memory, TILESET_DATA_START + 96 + (y * 4) + x, pattern, true);
+        uint8_t row = bitmap[y];
+        for (int x = 0; x < 4; x++) { // 2 pixels per byte
+            uint8_t pixel1 = (row & (1 << (7 - x * 2))) ? 0xF : 0x0;
+            uint8_t pixel2 = (row & (1 << (6 - x * 2))) ? 0xF : 0x0;
+            uint8_t combined = (pixel1 << 4) | pixel2;
+            memory_write_byte(memory, tile_addr + (y * 4) + x, combined, true);
         }
     }
 }
 
-void load_system_rom(uint8_t memory[]) {
-    // For now, create minimal system ROM with simple function stubs
-    // In a full implementation, this would load actual system ROM functions
-    
-    // System ROM function addresses - just put RET instructions for now
-    uint16_t system_functions[] = {
-        0x4300, // SYS_CLEAR_SCREEN
-        0x4302, // SYS_PUT_CHAR
-        0x4304, // SYS_PUT_STRING
-        0x4306, // SYS_SET_CURSOR
-        0x4334, // SYS_SET_VIDEO_MODE
-        0x4312, // SYS_SET_TILE
-        0x4314, // SYS_CREATE_SPRITE
-        0x4316, // SYS_MOVE_SPRITE
-        0x4330, // SYS_SET_PALETTE
-        0x4336, // SYS_SET_SCROLL
-        0x4400, // SYS_PLAY_TONE
-        0x4408, // SYS_STOP_CHANNEL
-        0x4500, // SYS_GET_KEYS
-        0x4502, // SYS_WAIT_KEY
-        0x4600, // SYS_MULTIPLY
-        0x4602, // SYS_DIVIDE
-        0x460C, // SYS_RANDOM
-        0x4700, // SYS_MEMCPY
-        0x4702, // SYS_MEMSET
-        0x4706, // SYS_STRLEN
-        0       // End array and allow for easier expansion
-    };
-    
-    // Install RET instructions at each function address
-    for (int i = 0; system_functions[i] != 0; i++) {
-        uint16_t addr = system_functions[i];
-        memory_write_word(memory, addr, 0xC000, true); // RET instruction
-    }
-    
-    printf("System ROM loaded with function stubs\n");
-}
 
 uint8_t memory_read_byte(uint8_t memory[], uint16_t address) {
     return memory[address];

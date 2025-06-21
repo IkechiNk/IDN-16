@@ -85,4 +85,22 @@ shared decode(uint16_t instruction);
  */
 void execute(shared info, Cpu_t* cpu);
 
+/*
+ * System call handler
+ */
+void handle_system_call(uint16_t address, Cpu_t* cpu);
+
+/*
+ * System call implementations (replace ROM functions)
+ */
+void syscall_clear_screen(Cpu_t* cpu);
+void syscall_put_char(Cpu_t* cpu);
+void syscall_put_string(Cpu_t* cpu);
+void syscall_get_input(Cpu_t* cpu);
+void syscall_play_tone(Cpu_t* cpu);
+void syscall_multiply(Cpu_t* cpu);
+void syscall_divide(Cpu_t* cpu);  
+void syscall_random(Cpu_t* cpu);
+void syscall_memcpy(Cpu_t* cpu);
+
 #endif // IDN16_CPU_H

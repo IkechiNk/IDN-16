@@ -54,6 +54,7 @@ set(CORE_SOURCES
 	src/core/cpu.c
 	src/core/memory.c
 	src/core/instructions.c
+	src/core/syscalls.c
 	src/core/runner.c
 	src/core/io/display.c
 	src/core/io/keyboard.c

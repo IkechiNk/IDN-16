@@ -12,37 +12,43 @@
 #define MEMORY_SIZE 65536 // 64KB
 
 // Memory Map addressing constraints
-#define ROM_START 0x0000
-#define ROM_END 0x1FFF                    // 8KB user ROM
-#define RAM_START 0x2000  
-#define RAM_END 0x2FFF                    // 4KB general RAM
+#define USER_ROM_START 0x0000
+#define USER_ROM_END 0x7FFF               // 32KB user program ROM (4x larger)
+
+#define STACK_START 0x8000
+#define STACK_END 0x8FFF                  // 4KB hardware stack
+
+#define RAM_START 0x9000  
+#define RAM_END 0xCFFF                    // 16KB general RAM (4x larger)
 
 // Video Memory Layout
-#define VIDEO_RAM_START 0x3000
-#define VIDEO_RAM_END 0x3FFF              // 4KB video RAM
+#define VIDEO_RAM_START 0xD000
+#define VIDEO_RAM_END 0xEFFF              // 8KB video RAM
 
-#define TILE_BUFFER_START 0x3000
-#define TILE_BUFFER_END 0x34FF            // 40x30 tiles = 1200 bytes
-#define SPRITE_TABLE_START 0x3500
-#define SPRITE_TABLE_END 0x35FF           // 64 sprites x 4 bytes = 256 bytes
-#define PALETTE_RAM_START 0x3600
-#define PALETTE_RAM_END 0x367F            // 64 colors x 2 bytes = 128 bytes
-#define VIDEO_CONTROL_START 0x3680
-#define VIDEO_CONTROL_END 0x369F          // Video control registers = 32 bytes
-#define TILESET_DATA_START 0x36A0
-#define TILESET_DATA_END 0x3FFF           // 256 tiles x 32 bytes each
+#define TILE_BUFFER_START 0xD000
+#define TILE_BUFFER_END 0xD4FF            // 40x30 tiles = 1200 bytes
+#define SPRITE_TABLE_START 0xD500  
+#define SPRITE_TABLE_END 0xD5FF           // 64 sprites x 4 bytes = 256 bytes
+#define PALETTE_RAM_START 0xD600
+#define PALETTE_RAM_END 0xD67F            // 64 colors x 2 bytes = 128 bytes
+#define VIDEO_CONTROL_START 0xD680
+#define VIDEO_CONTROL_END 0xD69F          // Video control registers = 32 bytes
+#define TILESET_DATA_START 0xD6A0
+#define TILESET_DATA_END 0xDFFF           // 256 tiles x 32 bytes each
+#define VIDEO_BUFFER_START 0xE000
+#define VIDEO_BUFFER_END 0xEFFF           // 4KB frame buffer for scrolling
 
-// Audio, Input, System
-#define AUDIO_REG_START 0x4000
-#define AUDIO_REG_END 0x40FF              // 256 bytes audio
-#define INPUT_REG_START 0x4100
-#define INPUT_REG_END 0x41FF              // 256 bytes input
-#define SYSTEM_CTRL_START 0x4200
-#define SYSTEM_CTRL_END 0x42FF            // 256 bytes system control
+// I/O and System Control - 4KB total
+#define AUDIO_REG_START 0xF000
+#define AUDIO_REG_END 0xF0FF              // 256 bytes audio
+#define INPUT_REG_START 0xF100
+#define INPUT_REG_END 0xF1FF              // 256 bytes input
+#define SYSTEM_CTRL_START 0xF200
+#define SYSTEM_CTRL_END 0xF2FF            // 256 bytes system control
 
-// System ROM - massive space for built-in functions
-#define SYSTEM_ROM_START 0x4300
-#define SYSTEM_ROM_END 0xFFFF             // ~47KB system ROM
+// System call addresses (trap to C functions)
+#define SYSCALL_BASE 0xF300               // System calls start here
+#define SYSCALL_END 0xFFFF                // System call range
 
 // Display constants
 #define SCREEN_WIDTH_TILES 40
@@ -80,13 +86,14 @@
 
 // Memory regions
 typedef enum {
-    REGION_ROM,
+    REGION_USER_ROM,
+    REGION_STACK,
     REGION_RAM, 
     REGION_VIDEO,
     REGION_AUDIO,
     REGION_INPUT,
     REGION_SYSTEM_CTRL,
-    REGION_SYSTEM_ROM,
+    REGION_SYSCALL,
     REGION_COUNT
 } MemoryRegion_t;
 
@@ -100,11 +107,11 @@ typedef struct {
 } MemoryRegion;
 
 /* 
- * Initializes memory with default values and system ROM
+ * Initializes memory with default values
  */
 void memory_init(uint8_t memory[]); 
 
-bool load_rom(uint8_t memory[], const char* rom);
+bool load_user_rom(uint8_t memory[], const char* rom);
 
 /* 
  * Memory access functions
@@ -126,7 +133,19 @@ void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint
 void initialize_video_memory(uint8_t memory[]);
 void initialize_default_palette(uint8_t memory[]);
 void initialize_default_tileset(uint8_t memory[]);
-void load_system_rom(uint8_t memory[]);
-void create_minimal_system_rom(uint8_t memory[]);
+void create_font_tile(uint8_t memory[], int tile_id, uint8_t bitmap[8]);
+
+/* 
+ * System call definitions
+ */
+#define SYSCALL_CLEAR_SCREEN    0xF300
+#define SYSCALL_PUT_CHAR        0xF301
+#define SYSCALL_PUT_STRING      0xF302
+#define SYSCALL_GET_INPUT       0xF303
+#define SYSCALL_PLAY_TONE       0xF304
+#define SYSCALL_MULTIPLY        0xF305
+#define SYSCALL_DIVIDE          0xF306
+#define SYSCALL_RANDOM          0xF307
+#define SYSCALL_MEMCPY          0xF308
 
 #endif // IDN16_MEMORY_H

@@ -61,14 +61,20 @@ Clay_Sizing Layout_Expand = {
     .width = CLAY_SIZING_GROW(0),
     .height = CLAY_SIZING_GROW(0)
 };
-
 Clay_Sizing Layout_Header = {
     .width = CLAY_SIZING_GROW(0),
 };
-
 Clay_Sizing Layout_Menu_Item = {
     .width = CLAY_SIZING_GROW(0),
     .height = CLAY_SIZING_FIXED(40)
+};
+Clay_Sizing Layout_Registers = {
+    .width = CLAY_SIZING_FIXED(200),
+    .height = CLAY_SIZING_GROW(0)
+};
+Clay_Sizing Layout_Assembly = {
+    .width = CLAY_SIZING_FIXED(200),
+    .height = CLAY_SIZING_GROW(0)
 };
 
 static inline Clay_Dimensions SDL_MeasureText(Clay_StringSlice text, Clay_TextElementConfig *config, void *user_data) {
@@ -103,7 +109,13 @@ void file_open_rom() {
         printf("Open canceled\n");
     }
 }
-void file_close_rom() { printf("Closing ROM...\n"); }
+void file_close_rom() { 
+    if (loaded_rom_file) {
+        fclose(loaded_rom_file);
+        loaded_rom_file = NULL;
+    }
+    printf("Closing ROM...\n"); 
+}
 void file_exit() { cpu->running = false; }
 
 void view_debug_mode() { debug_mode = !debug_mode; printf("Debug mode: %s\n", debug_mode ? "ON" : "OFF"); }
@@ -117,7 +129,7 @@ void run_start_resume() { printf("Start/Resume\n"); }
 void run_pause() { printf("Pause\n"); }
 void run_step_instruction() { printf("Step Instruction\n"); }
 void run_reset_cpu() { printf("Reset CPU\n"); }
-void run_load_system_rom() { printf("Load System ROM\n"); }
+void run_load_system_rom() { printf("System ROM no longer needed - using C function simulation\n"); }
 
 void tools_assembler() { printf("Assembler\n"); }
 void tools_disassembler() { printf("Disassembler\n"); }
@@ -146,8 +158,6 @@ MenuAction options_actions[] = { options_emulation_speed, options_audio_settings
 
 MenuAction* menu_action_arrays[] = { file_actions, view_actions, run_actions, tools_actions, debug_actions, options_actions };
 
-void CLAY_OnClick(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
-}
 void Header_Menu_Item_Click(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
     if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         MenuAction action = (MenuAction)userData;
@@ -155,7 +165,6 @@ void Header_Menu_Item_Click(Clay_ElementId elementId, Clay_PointerData pointerIn
         visible_menu = -1;
     }
 }
-
 void Header_Menu_Item(Clay_String text, MenuAction action) {
     CLAY((Clay_ElementDeclaration) {
         .layout = { .padding = {16, 8}, .sizing = Layout_Menu_Item},
@@ -166,12 +175,10 @@ void Header_Menu_Item(Clay_String text, MenuAction action) {
         CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = COLOR_LIGHT}));
     };
 }
-
 void Header_Button_Hovered(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
     int idx = (intptr_t)userData;
     if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) visible_menu = visible_menu == idx? -1 : idx;
 }
-
 void Header_Button(Clay_String button_id, Clay_String buttonText, Clay_String menu_id, Clay_String *items[], int idx) {
     Clay_ElementId btn_id = CLAY_SID(button_id);
     Clay_ElementId mnu_id = CLAY_SID(menu_id);
@@ -222,7 +229,6 @@ void Header_Button(Clay_String button_id, Clay_String buttonText, Clay_String me
         visible_menu = -1;
     }
 }
-
 // File menu items
 Clay_String *file_menu_items[] = {
     &CLAY_STRING("Open ROM"),
@@ -230,7 +236,6 @@ Clay_String *file_menu_items[] = {
     &CLAY_STRING("Exit"),
     NULL
 };
-
 // View menu items
 Clay_String *view_menu_items[] = {
     &CLAY_STRING("Debug Mode (F1)"),
@@ -241,7 +246,6 @@ Clay_String *view_menu_items[] = {
     &CLAY_STRING("Symbol Table"),
     NULL
 };
-
 // Run menu items
 Clay_String *run_menu_items[] = {
     &CLAY_STRING("Start/Resume"),
@@ -251,7 +255,6 @@ Clay_String *run_menu_items[] = {
     &CLAY_STRING("Load System ROM"),
     NULL
 };
-
 // Tools menu items
 Clay_String *tools_menu_items[] = {
     &CLAY_STRING("Assembler"),
@@ -260,7 +263,6 @@ Clay_String *tools_menu_items[] = {
     &CLAY_STRING("ROM Manager"),
     NULL
 };
-
 // Debug menu items
 Clay_String *debug_menu_items[] = {
     &CLAY_STRING("Breakpoints"),
@@ -269,7 +271,6 @@ Clay_String *debug_menu_items[] = {
     &CLAY_STRING("I/O Monitor"),
     NULL
 };
-
 // Options menu items
 Clay_String *options_menu_items[] = {
     &CLAY_STRING("Emulation Speed"),
@@ -292,6 +293,8 @@ Clay_RenderCommandArray App_Create_Layout() {
         .image = { .imageData = display ? display->texture : NULL },
         .aspectRatio = { .aspectRatio = 320/240}
     };
+    Clay_ElementDeclaration register_section = { .id = CLAY_ID("Registers"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Registers, .padding = { 8, 8, 8, 8 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
+    Clay_ElementDeclaration assembly_section = { .id = CLAY_ID("Assembly"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Assembly, .padding = { 8, 8, 8, 8 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
 
     CLAY(main_section) {
         CLAY(header_section) {
@@ -304,6 +307,15 @@ Clay_RenderCommandArray App_Create_Layout() {
         };
         CLAY(center) {
             CLAY(emulator_section_decl);
+            CLAY(register_section) {
+                CLAY_TEXT(CLAY_STRING("Registers"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
+                for (int i = 0; i < 8; i++) {
+                    char reg[16];
+                    int len = sprintf(reg, "r%d: 0x%04X", i, cpu->r[i]);
+                    Clay_String clay_reg = {.isStaticallyAllocated = false, .length = len, .chars = reg};
+                    CLAY_TEXT(clay_reg, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_LIGHT }));
+                };
+            };
         };
     };
     return Clay_EndLayout();

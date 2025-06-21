@@ -325,3 +325,38 @@ void execute(shared i, Cpu_t* cpu) {
             break;
     }
 }
+
+void handle_system_call(uint16_t address, Cpu_t* cpu) {
+    switch (address) {
+        case SYSCALL_CLEAR_SCREEN:
+            syscall_clear_screen(cpu);
+            break;
+        case SYSCALL_PUT_CHAR:
+            syscall_put_char(cpu);
+            break;
+        case SYSCALL_PUT_STRING:
+            syscall_put_string(cpu);
+            break;
+        case SYSCALL_GET_INPUT:
+            syscall_get_input(cpu);
+            break;
+        case SYSCALL_PLAY_TONE:
+            syscall_play_tone(cpu);
+            break;
+        case SYSCALL_MULTIPLY:
+            syscall_multiply(cpu);
+            break;
+        case SYSCALL_DIVIDE:
+            syscall_divide(cpu);
+            break;
+        case SYSCALL_RANDOM:
+            syscall_random(cpu);
+            break;
+        case SYSCALL_MEMCPY:
+            syscall_memcpy(cpu);
+            break;
+        default:
+            printf("Unknown system call: 0x%04X\n", address);
+            break;
+    }
+}

@@ -14,7 +14,7 @@ RES_DIR   = resources
 
 # --- Core Emulator ---
 CORE_SRC = $(SRC_DIR)/core/runner.c $(SRC_DIR)/core/cpu.c $(SRC_DIR)/core/memory.c \
-           $(SRC_DIR)/core/instructions.c $(SRC_DIR)/core/io/display.c $(SRC_DIR)/core/io/keyboard.c
+           $(SRC_DIR)/core/instructions.c $(SRC_DIR)/core/syscalls.c $(SRC_DIR)/core/io/display.c $(SRC_DIR)/core/io/keyboard.c
 CORE_BIN = $(BIN_DIR)/idn16
 
 # --- Disassembler ---

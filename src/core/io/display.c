@@ -118,15 +118,10 @@ void render_text_mode(display_t* display) {
             uint8_t ch = memory_read_byte(display->memory, tile_addr);
             
             if (ch >= 32 && ch < 127) {
-                // Render character using built-in font
-                for (int py = 0; py < 8; py++) {
-                    for (int px = 0; px < 8; px++) {
-                        int screen_x = x * 8 + px;
-                        int screen_y = y * 8 + py;
-                        uint16_t color = 0xFFFF; // White for now
-                        display->pixels[screen_y * display->width + screen_x] = color;
-                    }
-                }
+                // Map ASCII character to tile ID
+                // ASCII 32-126 maps to tiles 0-94 in the tileset
+                int tile_id = ch - 32;
+                render_tile_to_buffer(display, tile_id, x * 8, y * 8);
             }
         }
     }
