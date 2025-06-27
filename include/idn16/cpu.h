@@ -1,7 +1,7 @@
 #ifndef IDN16_CPU_H
 #define IDN16_CPU_H
 
-#define CPU_CLOCK_HZ 10000  // .5 MHz CPU
+#define CPU_CLOCK_HZ 100000  // 5 MHz CPU
 #define DISPLAY_REFRESH_HZ 60 // 60hz
 #define CYCLES_PER_FRAME (CPU_CLOCK_HZ / DISPLAY_REFRESH_HZ)
 #define MS_PER_FRAME (int)(1000 / DISPLAY_REFRESH_HZ)
@@ -32,6 +32,14 @@ typedef struct {
 
     // Cycle counter for CPU timing
     uint64_t cycles;
+
+    // Frame counter for display timing
+    uint32_t frame_count;
+
+    // Sleep timer
+    uint16_t sleep_timer; // Timer for sleep functionality, in milliseconds
+    
+    uint32_t last_time; // Last time stamp for timing operations
 
     // Interrupt handling
     bool interrupt_pending;
@@ -96,11 +104,38 @@ void handle_system_call(uint16_t address, Cpu_t* cpu);
 void syscall_clear_screen(Cpu_t* cpu);
 void syscall_put_char(Cpu_t* cpu);
 void syscall_put_string(Cpu_t* cpu);
+void syscall_set_cursor(Cpu_t* cpu);
+void syscall_get_cursor(Cpu_t* cpu);
+void syscall_put_char_at(Cpu_t* cpu);
+void syscall_scroll_up(Cpu_t* cpu);
+void syscall_fill_area(Cpu_t* cpu);
+void syscall_set_text_color(Cpu_t* cpu);
 void syscall_get_input(Cpu_t* cpu);
 void syscall_play_tone(Cpu_t* cpu);
 void syscall_multiply(Cpu_t* cpu);
 void syscall_divide(Cpu_t* cpu);  
 void syscall_random(Cpu_t* cpu);
 void syscall_memcpy(Cpu_t* cpu);
+void syscall_print_hex(Cpu_t* cpu);
+void syscall_print_dec(Cpu_t* cpu);
+void syscall_set_sprite(Cpu_t* cpu);
+void syscall_set_palette(Cpu_t* cpu);
+void syscall_move_sprite(Cpu_t* cpu);
+void syscall_set_sprite_pixel(Cpu_t* cpu);
+void syscall_get_frame_count(Cpu_t* cpu);
+void syscall_hide_sprite(Cpu_t* cpu);
+void syscall_get_sprite_pos(Cpu_t* cpu);
+void syscall_clear_sprite_range(Cpu_t* cpu);
+void syscall_check_collision(Cpu_t* cpu);
+void syscall_shift_sprites(Cpu_t* cpu);
+void syscall_copy_sprite(Cpu_t* cpu);
+void syscall_set_return_addr(Cpu_t* cpu);
+void syscall_move_sprite_right(Cpu_t* cpu);
+void syscall_move_sprite_left(Cpu_t* cpu);
+void syscall_move_sprite_up(Cpu_t* cpu);
+void syscall_move_sprite_down(Cpu_t* cpu);
+void syscall_timer_start(Cpu_t* cpu);
+void syscall_timer_stop(Cpu_t* cpu);
+void syscall_sleep(Cpu_t* cpu);
 
 #endif // IDN16_CPU_H

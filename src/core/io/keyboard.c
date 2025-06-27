@@ -52,6 +52,6 @@ void key_handler(display_t* display, SDL_Event *e) {
         default:
             break;
     }
-    memory_write_byte(display->memory, 0x5200, cont1, 1);
-    memory_write_byte(display->memory, 0x5201, cont2, 1);
+    memory_write_byte(display->memory, INPUT_CONTROLLER1, cont1, 1);
+    memory_write_byte(display->memory, INPUT_CONTROLLER2, cont2, 1);
 }

@@ -6,8 +6,8 @@
 #define MAX_BYTES 65536  // Maximum file size (64KB)
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s <input.bin> <output.asm>\n", argv[0]);
+    if (argc > 3 || argc < 2) {
+        fprintf(stderr, "Usage: %s <input.bin> <optional_output.asm>\n", argv[0]);
         return 1;
     }
 
@@ -47,11 +47,16 @@ int main(int argc, char *argv[]) {
     fclose(file);
 
     // Open output file
-    FILE *output_file = fopen(argv[2], "w");
-    if (!output_file) {
-        perror("Error opening output file");
-        free(buffer);
-        return 1;
+    FILE *output_file;
+    if (argc == 3) {
+        output_file = fopen(argv[2], "w");
+        if (!output_file) {
+            perror("Error opening output file");
+            free(buffer);
+            return 1;
+        }
+    } else {
+        output_file = stdout;  // Write to standard output if no output file specified
     }
 
     // Write header

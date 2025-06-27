@@ -1,6 +1,7 @@
 #include "../unity/unity.h"
 #include "idn16/cpu.h"
 #include "idn16/instructions.h"
+#include "idn16/memory.h"
 
 static Cpu_t* cpu;
 
@@ -293,8 +294,9 @@ void test_JLT(void) {
 
 void test_JSR_and_RET(void) {
     cpu->pc = 0x1000;
-    jsr(0x10, cpu);
-    TEST_ASSERT_EQUAL_UINT16(0x1010, cpu->pc);
+    cpu->r[1] = 0x2000;  // Target address in register
+    jsr(1, cpu);         // JSR now takes register number, not immediate
+    TEST_ASSERT_EQUAL_UINT16(0x2000, cpu->pc);
     // JSR should have saved PC + 2 (0x1002) in r[7]
     TEST_ASSERT_EQUAL_UINT16(0x1002, cpu->r[7]);
     ret(cpu);

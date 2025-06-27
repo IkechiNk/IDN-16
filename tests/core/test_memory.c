@@ -1,12 +1,12 @@
 #include "../unity/unity.h"
 #include "idn16/memory.h"
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 static uint8_t test_memory[MEMORY_SIZE];
 
 void setUp(void) {
     memory_init(test_memory);
-    SDL_Init(SDL_INIT_EVERYTHING);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 }
 
 void tearDown(void) {
@@ -48,10 +48,10 @@ void test_memory_basic_operations(void) {
 }
 
 void test_memory_get_region(void) {
-    TEST_ASSERT_EQUAL(REGION_ROM, memory_get_region(ROM_START));
+    TEST_ASSERT_EQUAL(REGION_USER_ROM, memory_get_region(USER_ROM_START));
     TEST_ASSERT_EQUAL(REGION_RAM, memory_get_region(RAM_START));
     TEST_ASSERT_EQUAL(REGION_VIDEO, memory_get_region(VIDEO_RAM_START));
-    TEST_ASSERT_EQUAL(REGION_SYSTEM_ROM, memory_get_region(MEMORY_SIZE - 1));
+    TEST_ASSERT_EQUAL(REGION_SYSCALL, memory_get_region(MEMORY_SIZE - 1));
 }
 
 void test_memory_dump_runs(void) {

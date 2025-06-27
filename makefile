@@ -5,7 +5,7 @@ LFLAGS  = -Wno-error=implicit-function-declaration -Wno-error=unused-function
 DEVFLAGS= -Wall -Wextra -Wshadow -Wformat=2 -fsanitize=address,undefined -Iinclude -Ilib/clay
 
 # --- Directory Structure ---
-BUILD_DIR = build
+BUILD_DIR = src/build
 BIN_DIR   = $(BUILD_DIR)/bin
 OBJ_DIR   = $(BUILD_DIR)/obj
 SRC_DIR   = src
@@ -13,7 +13,7 @@ TEST_DIR  = tests
 RES_DIR   = resources
 
 # --- Core Emulator ---
-CORE_SRC = $(SRC_DIR)/core/runner.c $(SRC_DIR)/core/cpu.c $(SRC_DIR)/core/memory.c \
+CORE_SRC = $(SRC_DIR)/main.c $(SRC_DIR)/core/cpu.c $(SRC_DIR)/core/memory.c \
            $(SRC_DIR)/core/instructions.c $(SRC_DIR)/core/syscalls.c $(SRC_DIR)/core/io/display.c $(SRC_DIR)/core/io/keyboard.c
 CORE_BIN = $(BIN_DIR)/idn16
 
@@ -60,7 +60,7 @@ dirs:
 core: $(CORE_BIN)
 
 $(CORE_BIN): $(CORE_SRC) $(DASM_INC) | dirs
-	$(CC) $(CFLAGS) -o $@ $^ -lSDL2 -lSDL2_ttf
+	$(CC) $(CFLAGS) -o $@ $^ -lSDL3 -lSDL3_ttf
 
 # --- Assembler ---
 asmblr: $(ASM_BIN)
@@ -104,10 +104,10 @@ run_test_codegen: $(TEST_CODEGEN_BIN)
 	cd $(BIN_DIR) && ./$(notdir $(TEST_CODEGEN_BIN))
 
 $(TEST_MEM_BIN): $(TEST_MEM_SRC) $(UNITY_SRC) $(SRC_DIR)/core/memory.c $(SRC_DIR)/core/instructions.c | dirs
-	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
+	$(CC) $(CFLAGS) -o $@ $^ -lSDL3
 
 $(TEST_CPU_BIN): $(TEST_CPU_SRC) $(UNITY_SRC) $(SRC_DIR)/core/cpu.c $(SRC_DIR)/core/memory.c $(SRC_DIR)/core/instructions.c $(DASM_INC) | dirs
-	$(CC) $(CFLAGS) -o $@ $^ -lSDL2
+	$(CC) $(CFLAGS) -o $@ $^ -lSDL3
 
 $(TEST_SYMTAB_BIN): $(TEST_SYMTAB_SRC) $(UNITY_SRC) $(ASM_DIR)/symbol_table.c | dirs
 	$(CC) $(CFLAGS) -o $@ $^
@@ -127,7 +127,7 @@ clean:
 # --- Utilities ---
 install-deps:
 	sudo apt update
-	sudo apt install build-essential libsdl2-dev libsdl2-ttf-dev flex bison git
+	sudo apt install build-essential libsdl3-dev libsdl3-ttf-dev flex bison git
 
 dev: clean all
 
@@ -140,7 +140,7 @@ assemble: $(ASM_BIN)
 	@echo "Example: make assemble PROG=examples/hello.asm OUT=hello.bin"
 ifdef PROG
 ifdef OUT
-	cd $(BIN_DIR) && ./asm ../$(PROG) ../$(RES_DIR)/roms/$(OUT)
+	cd $(BIN_DIR) && ./asm $(PROG) $(RES_DIR)/roms/$(OUT)
 else
 	@echo "Error: OUT variable not set"
 endif

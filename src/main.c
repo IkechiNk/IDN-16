@@ -8,6 +8,7 @@
 #include "idn16/io/display.h"
 #include "idn16/io/keyboard.h"
 #include "idn16/cpu.h"
+#include "idn16/dasm.h"
 #include "../lib/sfd/sfd.h"
 
 #define CLAY_IMPLEMENTATION
@@ -42,9 +43,14 @@ const float ScreenHeight = 792.0f;
 void *clay_mem;
 
 bool debug_mode = false;
+bool cycling = false;
 static int visible_menu = -1;
 
 static FILE* loaded_rom_file = NULL;
+
+// Persistent buffers for register display
+static char register_text_buffers[8][32];
+static Clay_String register_strings[8];
 
 // Utility to detect WSL
 static bool is_wsl() {
@@ -73,7 +79,7 @@ Clay_Sizing Layout_Registers = {
     .height = CLAY_SIZING_GROW(0)
 };
 Clay_Sizing Layout_Assembly = {
-    .width = CLAY_SIZING_FIXED(200),
+    .width = CLAY_SIZING_FIXED(650),
     .height = CLAY_SIZING_GROW(0)
 };
 
@@ -88,13 +94,23 @@ static inline Clay_Dimensions SDL_MeasureText(Clay_StringSlice text, Clay_TextEl
 
     return (Clay_Dimensions) { (float) width, (float) height };
 }
-
 void Handle_Clay_Errors(Clay_ErrorData error_data) {
     printf("%s\n", error_data.errorText.chars);
 }
 
 // Menu action handler functions
+void run_reset_cpu();
+void file_close_rom() { 
+    if (loaded_rom_file) {
+        fclose(loaded_rom_file);
+        loaded_rom_file = NULL;
+    }
+    run_reset_cpu();
+    printf("Closing ROM...\n"); 
+}
+
 void file_open_rom() { 
+    file_close_rom();
     printf("Opening ROM...\n");
     sfd_Options opt = {
         .title = "Open ROM",
@@ -105,17 +121,12 @@ void file_open_rom() {
     if (filename) {
         printf("Got file: '%s'\n", filename);
         loaded_rom_file = fopen(filename, "r");
+        load_user_rom(cpu->memory, loaded_rom_file);
     } else {
         printf("Open canceled\n");
     }
 }
-void file_close_rom() { 
-    if (loaded_rom_file) {
-        fclose(loaded_rom_file);
-        loaded_rom_file = NULL;
-    }
-    printf("Closing ROM...\n"); 
-}
+
 void file_exit() { cpu->running = false; }
 
 void view_debug_mode() { debug_mode = !debug_mode; printf("Debug mode: %s\n", debug_mode ? "ON" : "OFF"); }
@@ -125,11 +136,34 @@ void view_display_settings() { printf("Display Settings\n"); }
 void view_assembly_listing() { printf("Assembly Listing\n"); }
 void view_symbol_table() { printf("Symbol Table\n"); }
 
-void run_start_resume() { printf("Start/Resume\n"); }
-void run_pause() { printf("Pause\n"); }
-void run_step_instruction() { printf("Step Instruction\n"); }
-void run_reset_cpu() { printf("Reset CPU\n"); }
-void run_load_system_rom() { printf("System ROM no longer needed - using C function simulation\n"); }
+void run_start_resume() { cycling = true; }
+void run_pause() { cycling = false;}
+void run_step_instruction() { 
+    if (loaded_rom_file) {
+        cycling = false; 
+        cpu_cycle(cpu, debug_mode);
+    }
+}
+void run_reset_cpu() { 
+    cycling = false;
+    cpu_destroy(cpu);
+    display_destroy(display);
+    
+    /* Initialize the cpu */
+    cpu = cpu_init();
+    if (!cpu) {
+        fprintf(stderr, "Unable to intialize cpu\n");
+        exit(1);
+    }
+    /* Initialize the display */
+    display = display_init(320, 240, 2, cpu->memory, renderer, fonts[0]);
+    if (!display) {
+        fprintf(stderr, "Couldn't load display\n");
+        exit(1);
+    }
+    if (loaded_rom_file) load_user_rom(cpu->memory, loaded_rom_file);
+
+}
 
 void tools_assembler() { printf("Assembler\n"); }
 void tools_disassembler() { printf("Disassembler\n"); }
@@ -151,7 +185,7 @@ typedef void (*MenuAction)(void);
 
 MenuAction file_actions[] = { file_open_rom, file_close_rom, file_exit };
 MenuAction view_actions[] = { view_debug_mode, view_memory_viewer, view_cpu_registers, view_display_settings, view_assembly_listing, view_symbol_table };
-MenuAction run_actions[] = { run_start_resume, run_pause, run_step_instruction, run_reset_cpu, run_load_system_rom };
+MenuAction run_actions[] = { run_start_resume, run_pause, run_step_instruction, run_reset_cpu };
 MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_editor, tools_rom_manager };
 MenuAction debug_actions[] = { debug_breakpoints, debug_call_stack, debug_memory_dump, debug_io_monitor };
 MenuAction options_actions[] = { options_emulation_speed, options_audio_settings, options_graphics_settings, options_input_configuration, options_preferences };
@@ -252,7 +286,6 @@ Clay_String *run_menu_items[] = {
     &CLAY_STRING("Pause"),
     &CLAY_STRING("Step Instruction"),
     &CLAY_STRING("Reset CPU"),
-    &CLAY_STRING("Load System ROM"),
     NULL
 };
 // Tools menu items
@@ -294,7 +327,7 @@ Clay_RenderCommandArray App_Create_Layout() {
         .aspectRatio = { .aspectRatio = 320/240}
     };
     Clay_ElementDeclaration register_section = { .id = CLAY_ID("Registers"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Registers, .padding = { 8, 8, 8, 8 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
-    Clay_ElementDeclaration assembly_section = { .id = CLAY_ID("Assembly"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Assembly, .padding = { 8, 8, 8, 8 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
+    Clay_ElementDeclaration assembly_section = { .id = CLAY_ID("Assembly"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Assembly, .padding = { 8, 8, 8, 0 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
 
     CLAY(main_section) {
         CLAY(header_section) {
@@ -309,12 +342,67 @@ Clay_RenderCommandArray App_Create_Layout() {
             CLAY(emulator_section_decl);
             CLAY(register_section) {
                 CLAY_TEXT(CLAY_STRING("Registers"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
+                
+                // Update register text buffers with current CPU state
                 for (int i = 0; i < 8; i++) {
-                    char reg[16];
-                    int len = sprintf(reg, "r%d: 0x%04X", i, cpu->r[i]);
-                    Clay_String clay_reg = {.isStaticallyAllocated = false, .length = len, .chars = reg};
-                    CLAY_TEXT(clay_reg, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_LIGHT }));
-                };
+                    int len = sprintf(register_text_buffers[i], "r%d: 0x%04X", i, cpu->r[i]);
+                    register_strings[i] = (Clay_String){
+                        .isStaticallyAllocated = false, 
+                        .length = len, 
+                        .chars = register_text_buffers[i]
+                    };
+                    CLAY_TEXT(register_strings[i], CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_LIGHT }));
+                }
+                
+                // Add PC and flags display
+                static char pc_buffer[32];
+                static char flags_buffer[64];
+                
+                int pc_len = sprintf(pc_buffer, "PC: 0x%04X", cpu->pc);
+                Clay_String pc_string = {.isStaticallyAllocated = false, .length = pc_len, .chars = pc_buffer};
+                CLAY_TEXT(pc_string, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_ORANGE }));
+                
+                int flags_len = sprintf(flags_buffer, "Flags: Z:%d N:%d C:%d V:%d", 
+                                       cpu->flags.z, cpu->flags.n, cpu->flags.c, cpu->flags.v);
+                Clay_String flags_string = {.isStaticallyAllocated = false, .length = flags_len, .chars = flags_buffer};
+                CLAY_TEXT(flags_string, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_BLUE }));
+            };
+            CLAY(assembly_section) {
+                CLAY_TEXT(CLAY_STRING("Assembly"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
+                
+                // Show current instruction and some context, avoiding negative addresses
+                static char inst_buffers[5][80];
+                static Clay_String inst_strings[5];
+                int buffer_index = 0;
+                
+                // Calculate how many previous instructions we can safely show
+                int prev_count = (cpu->pc >= 4) ? 2 : (cpu->pc / 2);
+                int start_offset = -prev_count;
+                
+                for (int i = start_offset; i <= 2; i++) {
+                    uint16_t addr = cpu->pc + (i * 2);
+                    
+                    // Skip if address would be negative
+                    if ((int)cpu->pc + (i * 2) < 0) continue;
+                    
+                    uint16_t instruction = memory_read_word(cpu->memory, addr);
+                    bool is_current = (i == 0);
+                    
+                    int len = sprintf(inst_buffers[buffer_index], "%s%04X: %s", 
+                                     is_current ? "> " : " ", 
+                                     addr, 
+                                     disassemble_word(instruction));
+                    inst_strings[buffer_index] = (Clay_String){
+                        .isStaticallyAllocated = false, 
+                        .length = len, 
+                        .chars = inst_buffers[buffer_index]
+                    };
+                    
+                    Clay_Color text_color = is_current ? COLOR_ORANGE : COLOR_LIGHT;
+                    CLAY_TEXT(inst_strings[buffer_index], CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = text_color }));
+                    
+                    buffer_index++;
+                }
             };
         };
     };
@@ -341,17 +429,17 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     
     text_engine = TTF_CreateRendererTextEngine(renderer);
     if (!text_engine) {
-        SDL_Log("Failed to create text engine from renderer: %s", SDL_GetError());
+        SDL_Log("Failed to create text engine from renderer: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     fonts = SDL_calloc(1, sizeof(TTF_Font *));
     if (!fonts) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to allocate memory for the font array: %s", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to allocate memory for the font array: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     TTF_Font *font = TTF_OpenFont("resources/fonts/PixelifySans.ttf", 24);
     if (!font) {
-        SDL_Log("Failed to load font: %s", SDL_GetError());
+        SDL_Log("Failed to load font: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     fonts[FONT_ID] = font;
@@ -359,11 +447,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     /* Initialize the cpu */
     cpu = cpu_init();
     if (!cpu) {
-        SDL_Log("Unable to intialize cpu");
+        SDL_Log("Unable to intialize cpu\n");
         return SDL_APP_FAILURE;
     }
     /* Initialize the display */
-    display = display_init(320, 240, 2, cpu->memory, renderer);
+    display = display_init(320, 240, 2, cpu->memory, renderer, font);
     if (!display) {
         SDL_Log("Couldn't load display\n");
         return SDL_APP_FAILURE;
@@ -396,7 +484,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         case SDL_EVENT_QUIT:
             cpu->running = false;
             break;
-        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
             if (event->key.key == SDLK_ESCAPE) {
                 cpu->running = false;
             } else if (event->key.key == SDLK_F1) {
@@ -405,6 +493,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             } else if (event->key.key == SDLK_F4 && debug_mode) {
                 memory_dump(cpu->memory, 0x0000, 64, 16);
                 printf("Dumping memory\n");
+            } else if (event->key.key == SDLK_SPACE) {
+                run_step_instruction();
             }
             break;
         case SDL_EVENT_WINDOW_RESIZED:
@@ -444,6 +534,28 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     SDL_RenderPresent(renderer);
 
+    uint64_t last_frame_time = SDL_GetTicks();
+
+    for (int i = 0; (i < CYCLES_PER_FRAME) && cycling && cpu->running && cpu->sleep_timer == 0; i++) {
+        cpu_cycle(cpu, debug_mode);
+    }
+    if (cpu->sleep_timer > 0) {
+        fflush(stdout);
+        SDL_Delay(cpu->sleep_timer);
+        cpu->sleep_timer = 0;
+    }
+
+    // Increment frame counter every frame
+    if (cycling && cpu->running) {
+        cpu->frame_count++;
+    }
+    uint64_t current_time = SDL_GetTicks();
+    // Enforce 60fps timing (16.67ms per frame)
+    uint64_t frame_duration = current_time - last_frame_time;
+    if (frame_duration < MS_PER_FRAME) {
+        SDL_Delay(MS_PER_FRAME - frame_duration);
+    }
+    
     return SDL_APP_CONTINUE;
 }
 

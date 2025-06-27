@@ -20,7 +20,7 @@ void test_basic_emit_and_finalize(void) {
     // accessing internal state
     
     emit_reg_format(0, 0, 1, 2, 3, 0);  // ADD r1, r2, r3
-    emit_imm_format(2, 8, 1, 0, 42);     // LDI r1, 42
+    emit_imm_format_with_line(2, 8, 1, 0, 42, -1);     // LDI r1, 42
     
     char temp_filename[] = "/tmp/test_codegen_basic_XXXXXX";
     int fd = mkstemp(temp_filename);

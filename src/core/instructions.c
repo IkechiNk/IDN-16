@@ -1,25 +1,17 @@
 #include "idn16/instructions.h"
 #include "idn16/memory.h"
+#include "idn16/cpu.h"
 
-uint16_t sign_extend_5(uint16_t imm) {
-    if (imm >> 4) {
-        return imm | 0xFFF0;
-    }
-    return imm;
+int16_t sign_extend_5(uint16_t imm) {
+    return (int16_t)((imm & 0x10) ? (imm | 0xFFE0) : (imm & 0x1F));
 }
 
-uint16_t sign_extend_8(uint16_t imm) {
-    if (imm >> 7) {
-        return imm | 0xFF00;
-    }
-    return imm;
+int16_t sign_extend_8(uint16_t imm) {
+    return (int16_t)((imm & 0x80) ? (imm | 0xFF00) : (imm & 0xFF));
 }
 
-uint16_t sign_extend_11(uint16_t imm) {
-    if (imm >> 10) {
-        return imm | 0xF800;
-    }
-    return imm;
+int16_t sign_extend_11(uint16_t imm) {
+    return (int16_t)((imm & 0x400) ? (imm | 0xF800) : (imm & 0x7FF));
 }
 
 void add(uint16_t rd, uint16_t rs1, uint16_t rs2, Cpu_t *cpu) {
@@ -297,6 +289,7 @@ void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu) {
 }
 
 void jmp(uint16_t imm, Cpu_t *cpu) {
+    cpu->r[7] = cpu->pc + 2; 
     cpu->pc += (int)sign_extend_11(imm);
     cpu->flags.z = (cpu->pc == 0);
 }
@@ -304,43 +297,43 @@ void jeq(uint16_t imm, Cpu_t *cpu) {
     if (cpu->flags.z) {
         jmp(imm, cpu);
     } else {
-         cpu->pc += 2;
+        cpu->pc += 2;
     }
 }
 void jne(uint16_t imm, Cpu_t *cpu) {
     if (!cpu->flags.z) {
         jmp(imm, cpu);
     } else {
-         cpu->pc += 2;
+        cpu->pc += 2;
     }
 }
 void jgt(uint16_t imm, Cpu_t *cpu) {
     if (!cpu->flags.z && !cpu->flags.n) {
         jmp(imm, cpu);
     } else {
-         cpu->pc += 2;
+        cpu->pc += 2;
     }
 }
 void jlt(uint16_t imm, Cpu_t *cpu) {
     if (cpu->flags.n && !cpu->flags.z) {
         jmp(imm, cpu);
     } else {
-         cpu->pc += 2;
+        cpu->pc += 2;
     }
 }
-void jsr(uint16_t imm, Cpu_t *cpu) {
-    uint16_t target_address = cpu->pc + (int)sign_extend_11(imm);
+void jsr(uint16_t rs1, Cpu_t *cpu) {
+    // JSR uses register for absolute addressing - rs1 contains the target address
+    uint16_t target_address = cpu->r[rs1];
     
-    // Check if this is a system call
+    // Check if target is in system call range
     if (target_address >= SYSCALL_BASE && target_address <= SYSCALL_END) {
         handle_system_call(target_address, cpu);
         cpu->pc += 2; // Move to next instruction
         return;
     }
-    
-    // Normal subroutine call
-    cpu->r[7] = cpu->pc + (uint16_t)0b10;
-    jmp(imm, cpu);
+    // Normal subroutine call - save return address and jump to absolute target
+    cpu->r[7] = cpu->pc + 2; // Save return address (next instruction)
+    cpu->pc = target_address; // Jump to absolute address
 }
 void ret(Cpu_t *cpu) {
     cpu->pc = cpu->r[7];

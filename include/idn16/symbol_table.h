@@ -2,7 +2,7 @@
 #define SYMBOL_TABLE_H
 
 #include <stdint.h>
-#define MAX_SYMBOL 4096
+#define MAX_SYMBOL 8192
 
 typedef struct Symbol {
     char* name;

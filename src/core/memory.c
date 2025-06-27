@@ -4,7 +4,6 @@
 // Memory regions configuration
 static const MemoryRegion memory_regions[REGION_COUNT] = {
     {USER_ROM_START, USER_ROM_END, true, false, "User ROM"},
-    {STACK_START, STACK_END, false, false, "Stack"},
     {RAM_START, RAM_END, false, false, "RAM"},
     {VIDEO_RAM_START, VIDEO_RAM_END, false, true, "Video Memory"},
     {AUDIO_REG_START, AUDIO_REG_END, false, true, "Audio Registers"},
@@ -18,24 +17,17 @@ static bool is_little_endian(void) {
     return *((uint8_t*)&value);
 }
 
-bool load_user_rom(uint8_t memory[], const char* rom) {
-    char full_rom_loc[14 + strlen(rom) + 1];
-    sprintf(full_rom_loc, "resources/roms/%s", rom);
-    FILE* fRom = fopen(full_rom_loc, "rb");
-    if (!fRom) {
-        return false;
-    }
+bool load_user_rom(uint8_t memory[], FILE* rom) {
     // Get file size first
-    fseek(fRom, 0, SEEK_END);
-    size_t file_size = ftell(fRom);
-    rewind(fRom);
+    fseek(rom, 0, SEEK_END);
+    size_t file_size = ftell(rom);
+    rewind(rom);
     
     // Read up to ROM size limit (32KB)
     size_t max_read = (USER_ROM_END - USER_ROM_START + 1);
     size_t bytes_to_read = (file_size < max_read) ?  file_size : max_read;
     
-    fread(memory + USER_ROM_START, 1, bytes_to_read, fRom);
-    fclose(fRom);
+    fread(memory + USER_ROM_START, 1, bytes_to_read, rom);
     return true;
 }
 
@@ -50,35 +42,38 @@ void memory_init(uint8_t memory[]) {
     // Initialize video system
     initialize_video_memory(memory);
     initialize_default_palette(memory);
-    initialize_default_tileset(memory);
     
-    // Initialize stack pointer to top of stack
-    memory_write_word(memory, SYSTEM_CTRL_START + 10, STACK_END, true);
+    // Initialize stack pointer to top of RAM
+    memory_write_word(memory, SYSTEM_CTRL_START + 10, RAM_END, true);
     
     printf("IDN-16 System initialized (simplified - no system ROM)\n");
 }
 
 void initialize_video_memory(uint8_t memory[]) {
-    // Set initial video mode to text
-    memory_write_byte(memory, VIDEO_MODE_REG, VIDEO_MODE_TEXT, true);
+    // Initialize video system (no video mode - dual architecture)
     
-    // Clear scroll registers
-    memory_write_word(memory, SCROLL_X_REG, 0, true);
-    memory_write_word(memory, SCROLL_Y_REG, 0, true);
+    // Clear cursor positions
+    memory_write_word(memory, CURSOR_X_REG, 0, true);
+    memory_write_word(memory, CURSOR_Y_REG, 0, true);
     
     // Clear tile buffer
     for (int i = 0; i < SCREEN_WIDTH_TILES * SCREEN_HEIGHT_TILES; i++) {
-        memory_write_byte(memory, TILE_BUFFER_START + i, 0, true);
+        memory_write_byte(memory, CHAR_BUFFER_START + i, 0, true);
     }
     
-    // Clear sprite table
-    for (int i = 0; i < MAX_SPRITES * 4; i++) {
+    // Clear sprite table (3 bytes per sprite: X, Y, Tile_ID)
+    for (int i = 0; i < MAX_SPRITES * 3; i++) {
         memory_write_byte(memory, SPRITE_TABLE_START + i, 0, true);
+    }
+
+    // Clear tile set data (64 bytes per tile, 105 tiles)
+    for (int i = 0; i < MAX_TILES * TILE_SIZE * TILE_SIZE; i++) {
+        memory_write_byte(memory, TILESET_DATA_START + i, 17, true);
     }
 }
 
 void initialize_default_palette(uint8_t memory[]) {
-    // Simple 16-color palette
+    // 16-color palette (RGB565 format)
     const uint16_t default_colors[16] = {
         0x0000, // 0 - Black
         0x000F, // 1 - Dark Blue
@@ -98,66 +93,9 @@ void initialize_default_palette(uint8_t memory[]) {
         0xFFFF, // 15 - White
     };
     
-    for (int i = 0; i < 16; i++) {
+    // Write all 16 colors to palette RAM
+    for (int i = 0; i < PALETTE_SIZE; i++) {
         memory_write_word(memory, PALETTE_RAM_START + (i * 2), default_colors[i], true);
-    }
-    
-    // Fill remaining palette entries with variations
-    for (int i = 16; i < PALETTE_SIZE; i++) {
-        uint16_t base_color = default_colors[i % 16];
-        // Darken the color slightly for variations
-        uint16_t variant = ((base_color >> 1) & 0x7BEF);
-        memory_write_word(memory, PALETTE_RAM_START + (i * 2), variant, true);
-    }
-}
-
-void initialize_default_tileset(uint8_t memory[]) {
-    // Font tiles for ASCII characters 32-126 (95 characters total)
-    // Each tile is 8x8 pixels, stored as 32 bytes (4 bits per pixel)
-    
-    // Simple font data - 8 bytes per character (1 bit per pixel, expanded to 4-bit)
-    // ASCII 32 (space) = Tile 0
-    create_font_tile(memory, 0, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
-    
-    // ASCII 33 (!) = Tile 1  
-    create_font_tile(memory, 1, (uint8_t[]){0x18, 0x18, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00});
-    
-    // ASCII 45 (-) = Tile 13
-    create_font_tile(memory, 13, (uint8_t[]){0x00, 0x00, 0x00, 0x7E, 0x00, 0x00, 0x00, 0x00});
-    
-    // ASCII 49 (1) = Tile 17
-    create_font_tile(memory, 17, (uint8_t[]){0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00});
-    
-    // ASCII 54 (6) = Tile 22  
-    create_font_tile(memory, 22, (uint8_t[]){0x3C, 0x60, 0x60, 0x7C, 0x66, 0x66, 0x3C, 0x00});
-    
-    // ASCII 68 (D) = Tile 36
-    create_font_tile(memory, 36, (uint8_t[]){0x7C, 0x66, 0x66, 0x66, 0x66, 0x66, 0x7C, 0x00});
-    
-    // ASCII 73 (I) = Tile 41
-    create_font_tile(memory, 41, (uint8_t[]){0x7E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00});
-    
-    // ASCII 78 (N) = Tile 46
-    create_font_tile(memory, 46, (uint8_t[]){0x66, 0x76, 0x7E, 0x6E, 0x66, 0x66, 0x66, 0x00});
-    
-    // Fill remaining tiles with a default pattern for unsupported characters
-    for (int i = 95; i < 256; i++) {
-        create_font_tile(memory, i, (uint8_t[]){0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF, 0x00});
-    }
-}
-
-void create_font_tile(uint8_t memory[], int tile_id, uint8_t bitmap[8]) {
-    uint16_t tile_addr = TILESET_DATA_START + (tile_id * 32);
-    
-    // Convert 1-bit bitmap to 4-bit tile data
-    for (int y = 0; y < 8; y++) {
-        uint8_t row = bitmap[y];
-        for (int x = 0; x < 4; x++) { // 2 pixels per byte
-            uint8_t pixel1 = (row & (1 << (7 - x * 2))) ? 0xF : 0x0;
-            uint8_t pixel2 = (row & (1 << (6 - x * 2))) ? 0xF : 0x0;
-            uint8_t combined = (pixel1 << 4) | pixel2;
-            memory_write_byte(memory, tile_addr + (y * 4) + x, combined, true);
-        }
     }
 }
 

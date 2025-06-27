@@ -1,6 +1,6 @@
 # `IDN-16` Console
 ## Table of Contents
-<!-- TODO: WHEN GETTING "{lib}.dll" is not a .so shared library, this problem is becuase cmake is returning the windows path to the libary.-->
+<!-- NOTE: WHEN GETTING "{lib}.dll" is not a .so shared library, this problem is becuase cmake is returning the windows path to the libary.-->
 - [`IDN-16` Console](#idn-16-console)
   - [Table of Contents](#table-of-contents)
   - [About](#about)
@@ -14,18 +14,22 @@
   - [Documentation](#documentation)
     - [Memory Mapping](#memory-mapping)
       - [High-level Memory Layout](#high-level-memory-layout)
-      - [Video Memory Layout (0x3000-0x3FFF)](#video-memory-layout-0x3000-0x3fff)
+      - [Video Memory Layout (0xD000-0xEFFF)](#video-memory-layout-0xd000-0xefff)
     - [IO-Interfacing](#io-interfacing)
-      - [Audio System (0x4000-0x40FF)](#audio-system-0x4000-0x40ff)
-      - [Input System (0x4100-0x41FF)](#input-system-0x4100-0x41ff)
-      - [System Control (0x4200-0x42FF)](#system-control-0x4200-0x42ff)
-      - [Video Control Registers (0x3680-0x369F)](#video-control-registers-0x3680-0x369f)
-    - [System ROM Functions](#system-rom-functions)
-      - [Graphics Functions](#graphics-functions)
+      - [Audio System (0xF000-0xF0FF)](#audio-system-0xf000-0xf0ff)
+      - [Input System (0xF100-0xF1FF)](#input-system-0xf100-0xf1ff)
+      - [System Control (0xF200-0xF2FF)](#system-control-0xf200-0xf2ff)
+      - [Video Control Registers (0xD4B0-0xD4CF)](#video-control-registers-0xd4b0-0xd4cf)
+    - [System Architecture](#system-architecture)
+    - [System Call Functions](#system-call-functions)
+      - [Text/Console Functions](#textconsole-functions)
+      - [Sprite Animation Functions](#sprite-animation-functions)
+      - [Timer Functions](#timer-functions)
       - [Audio Functions](#audio-functions)
       - [Input Functions](#input-functions)
       - [Math Functions](#math-functions)
       - [Memory/Utility Functions](#memoryutility-functions)
+    - [Sprite System (Direct Memory Access)](#sprite-system-direct-memory-access)
     - [CPU Architecture](#cpu-architecture)
       - [Registers](#registers)
       - [Status Flags](#status-flags)
@@ -199,34 +203,158 @@ HLT
 
 ### Example Programs
 
-Here's a simple factorial program to demonstrate the assembly language:
+**Hello World (Grid-based)**
+```assembly
+CHAR_H = 72
+CHAR_E = 69
+CHAR_L = 76
+CHAR_O = 79
 
+start:
+    ; Clear screen
+    LOAD16 r1, 0xF300
+    JSR r1
+    
+    ; Display "HELLO" using cursor
+    LDI r1, CHAR_H
+    LOAD16 r2, 0xF301
+    JSR r2
+    
+    LDI r1, CHAR_E
+    JSR r2
+    
+    LDI r1, CHAR_L
+    JSR r2
+    JSR r2                  ; display 'L' twice
+    
+    LDI r1, CHAR_O
+    JSR r2
+    
+    HLT
+```
+
+**Centered Text (Grid-based)**
+```assembly
+; Draw "IDN-16" centered on screen using cursor positioning
+start:
+    LOAD16 r1, 0xF300       ; clear screen
+    JSR r1
+    
+    ; Position cursor at center (40x30 grid, so center is around 17,15)
+    LDI r1, 17              ; center x (character position)
+    LDI r2, 15              ; center y (character position)
+    LOAD16 r3, 0xF303       ; set cursor
+    JSR r3
+    
+    ; Display "IDN-16" using PUT_CHAR
+    LDI r1, 'I'
+    LOAD16 r2, 0xF301       ; PUT_CHAR
+    JSR r2
+    
+    LDI r1, 'D'
+    JSR r2
+    
+    LDI r1, 'N'
+    JSR r2
+    
+    LDI r1, '-'
+    JSR r2
+    
+    LDI r1, '1'
+    JSR r2
+    
+    LDI r1, '6'
+    JSR r2
+    
+    HLT
+```
+
+**Input Handling**
+```assembly
+input_loop:
+    LDI r1, 0               ; controller 0
+    LOAD16 r2, 0xF309       ; GET_INPUT
+    JSR r2                  ; r1 = button state
+    
+    CMP r1, r0              ; check if any buttons pressed
+    JEQ input_loop          ; loop if no input
+    
+    ; Button pressed - display something
+    LDI r1, 42              ; asterisk character
+    LOAD16 r2, 0xF301       ; PUT_CHAR
+    JSR r2
+    
+    JMP input_loop
+```
+
+**Factorial Calculator**
 ```assembly
 ; Calculate factorial of 5
-start:
-    LDI  r1, 5        ; Calculate factorial of 5
-    LDI  r2, 1        ; Initialize result to 1
+factorial_demo:
+    LDI r1, 5               ; number to calculate
+    LDI r2, 1               ; result accumulator
     
 factorial_loop:
-    CMP  r1, 0        ; Check if counter is zero
-    JEQ  done         ; If zero, we're done
+    CMP r1, r0              ; check if done
+    JEQ factorial_done
     
-    MOV  r3, r2       ; Copy current result to r3
-    MOV  r4, r1       ; Copy counter to r4
+    ; Multiply r2 by r1 using system call
+    LOAD16 r3, 0xF30B       ; MULTIPLY syscall
+    JSR r3                  ; r1 = r2 * r1
+    MOV r2, r1              ; store result
     
-multiply_loop:
-    ADDI r4, r4, -1   ; Decrement multiply counter
-    JEQ  multiply_done ; If zero, multiplication is done
-    ADD  r2, r2, r3   ; Add r3 to result
-    JMP  multiply_loop
+    DEC r1                  ; decrement counter
+    JMP factorial_loop
     
-multiply_done:
-    ADDI r1, r1, -1   ; Decrement factorial counter
-    JMP  factorial_loop
+factorial_done:
+    ; Display result as decimal
+    MOV r1, r2
+    LOAD16 r2, 0xF310       ; PRINT_DEC
+    JSR r2
+    HLT
+```
+
+**Simple Red Square Sprite Demo:**
+```assembly
+; IDN-16 Red Square Sprite Demo
+; Creates a red 8x8 square sprite at center of display
+
+; Memory addresses
+PALETTE_RAM_START = 0xD4D0        ; Palette colors (RGB565)
+SPRITE_TABLE_START = 0xD4F0       ; Sprite positions and tile IDs
+TILESET_DATA_START = 0xD5B0       ; Tile pixel data
+
+start:
+    ; Set up red color in palette slot 1
+    LOAD16 r1, PALETTE_RAM_START   ; Palette base address
+    ADDI r1, r1, 2                 ; Palette slot 1 (2 bytes per color)
+    LOAD16 r2, 0xF800              ; Red color (RGB565: 11111 000000 00000)
+    STW r2, [r1+0]                 ; Write red to palette slot 1
     
-done:
-    STB   r2, [r7+0] ; Store result at address in r7
-    HLT              ; Halt execution
+    ; Create red square tile (tile 1) - fill all 64 pixels
+    LOAD16 r1, TILESET_DATA_START  ; Tile 0 base
+    ADDI r1, r1, 64                ; Move to tile 1 (64 bytes per tile)
+    LDI r2, 1                      ; Palette index 1 (red)
+    LDI r3, 0                      ; Pixel counter
+    
+fill_tile:
+    STB r2, [r1+0]                 ; Write red pixel
+    ADDI r1, r1, 1                 ; Next pixel address
+    ADDI r3, r3, 1                 ; Increment counter
+    LDI r4, 64                     ; Total pixels
+    CMP r3, r4                     ; Check if done
+    JNE fill_tile                  ; Continue if not done
+    
+    ; Position sprite at center (20x15 tiles = center of 40x30 grid)
+    LOAD16 r1, SPRITE_TABLE_START  ; Sprite table base
+    LDI r2, 20                     ; X position (center)
+    STB r2, [r1+0]                 ; Write X coordinate
+    LDI r2, 15                     ; Y position (center)
+    STB r2, [r1+1]                 ; Write Y coordinate
+    LDI r2, 1                      ; Tile ID 1 (our red square)
+    STB r2, [r1+2]                 ; Write tile ID
+    
+    HLT
 ```
 
 ## Documentation
@@ -235,39 +363,39 @@ done:
 #### High-level Memory Layout
 The `IDN-16` has a 64KB byte-addressable memory space sectioned into several dedicated regions:
 ```
-0x0000-0x1FFF: User ROM (8KB user program storage, read-only)
-0x2000-0x2FFF: RAM (4KB general purpose, read-write)
-0x3000-0x3FFF: Video Memory (4KB for graphics system)
-0x4000-0x40FF: Audio Registers (256 bytes)
-0x4100-0x41FF: Input Registers (256 bytes)
-0x4200-0x42FF: System Control (256 bytes for interrupts, timers)
-0x4300-0xFFFF: System ROM (~47KB for built-in functions)
+0x0000-0x7FFF: User ROM (32KB user program storage, read-only)
+0x8000-0xCFFF: RAM (20KB general purpose, read-write)
+0xD000-0xEFFF: Video Memory (8KB for graphics system)
+0xF000-0xF0FF: Audio Registers (256 bytes)
+0xF100-0xF1FF: Input Registers (256 bytes)
+0xF200-0xF2FF: System Control (256 bytes for interrupts, timers)
+0xF300-0xFFFF: System Calls (3328 bytes for system call range)
 ```
 
-#### Video Memory Layout (0x3000-0x3FFF)
+#### Video Memory Layout (0xD000-0xEFFF)
 The video system uses a tile-based architecture with the following sub-regions:
 ```
-0x3000-0x34FF: Tile Buffer (40x30 tiles = 1200 bytes)
-0x3500-0x35FF: Sprite Table (64 sprites x 4 bytes = 256 bytes)
-0x3600-0x367F: Palette RAM (64 colors x 2 bytes RGB565 = 128 bytes)
-0x3680-0x369F: Video Control Registers (32 bytes)
-0x36A0-0x3FFF: Tileset Data (256 tiles x 32 bytes each)
+0xD000-0xD4AF: Character Buffer (40x30 characters = 1200 bytes)
+0xD4B0-0xD4CF: Video Control Registers (32 bytes)
+0xD4D0-0xD4EF: Palette RAM (16 colors x 2 bytes RGB565 = 32 bytes)
+0xD4F0-0xD5AF: Sprite Table (64 sprites x 3 bytes = 192 bytes)
+0xD5B0-0xEFFF: Tileset Data (105 tiles x 64 bytes each, 8x8 pixels per tile)
 ```
 
 **Display Specifications:**
 - Resolution: 320x240 pixels (40x30 tiles, 8x8 pixels per tile)
-- Colors: 64-color palette using RGB565 format
+- Colors: 16-color palette using RGB565 format
 - Sprites: Up to 64 hardware sprites with priority layers and flipping
-- Video Modes: Text (simple programs), Tiles (backgrounds), Mixed (tiles + sprites for games)
+- Architecture: Dual-mode system (text via syscalls, sprites via memory)
 - Features: Smooth scrolling backgrounds, no complex pixel manipulation needed
 ### IO-Interfacing
 The IDN-16 uses memory-mapped I/O for interfacing with hardware systems:
 
-#### Audio System (0x4000-0x40FF)
+#### Audio System (0xF000-0xF0FF)
 Audio processing and sound generation registers (256 bytes available for audio channels, waveform control, and effects).
 
-#### Input System (0x4100-0x41FF)
-**0x4100**: Controller 1 button state (read-only)
+#### Input System (0xF100-0xF1FF)
+**0xF100**: Controller 1 button state (read-only)
 - Bit 0: F key (Action A)
 - Bit 1: G key (Action B)
 - Bit 2: Start
@@ -277,7 +405,7 @@ Audio processing and sound generation registers (256 bytes available for audio c
 - Bit 6: A key (Left)
 - Bit 7: D key (Right)
 
-**0x4101**: Controller 2 button state (read-only)
+**0xF101**: Controller 2 button state (read-only)
 - Bit 0: Action A
 - Bit 1: Action B  
 - Bit 2: Start
@@ -287,50 +415,85 @@ Audio processing and sound generation registers (256 bytes available for audio c
 - Bit 6: Arrow Left
 - Bit 7: Arrow Right
 
-**0x4102 - 0x41FF**: Reserved for additional input devices
+**0xF102 - 0xF1FF**: Reserved for additional input devices
 
 **Key Mappings:**
 - **Player 1**: WASD for movement, F/G for action buttons
 - **Player 2**: Arrow keys for movement
 - **Debug**: F1 (Debug mode), F4 (Memory dump)
 
-#### System Control (0x4200-0x42FF)
-- **0x4200**: System status register
-- **0x4201**: Interrupt control register
-- **0x4202**: Timer counter (low byte)
-- **0x4204**: Timer counter (high byte)
-- **0x4206**: Frame counter (low byte)
-- **0x4208**: Frame counter (high byte)
+#### System Control (0xF200-0xF2FF)
+- **0xF200**: System status register
+- **0xF201**: Interrupt control register
+- **0xF202**: Timer counter (low byte)
+- **0xF203**: Timer counter (high byte)
+- **0xF206**: Frame counter (low byte)
+- **0xF208**: Frame counter (high byte)
 
-#### Video Control Registers (0x3680-0x369F)
-- **0x3680**: Video mode register (Text=0, Tiles=1, Mixed=2)
-- **0x3682**: Background scroll X position
-- **0x3684**: Background scroll Y position
-- **0x3686**: Text cursor X position
-- **0x3688**: Text cursor Y position
+#### Video Control Registers (0xD4B0-0xD4CF)
+- **0xD4B0**: Text cursor X position
+- **0xD4B2**: Text cursor Y position
 
-### System ROM Functions
-The IDN-16 includes a comprehensive System ROM with built-in functions accessible through the assembler. The assembler recognizes system function names, eliminating the need for manual address calculations. All functions follow a consistent calling convention where **r1 is the primary output register** whenever possible.
+### System Architecture
 
-#### Graphics Functions
+The IDN-16 uses a **dual-mode graphics system**:
+
+1. **Text System**: Controlled by system calls (0xF300+) for console-style character output
+2. **Sprite System**: Controlled by direct memory writes to video memory (0xD000+)
+
+**Text operations** use system calls and work like a traditional console.
+**Sprite operations** require direct memory manipulation for maximum performance.
+
+### System Call Functions
+System calls handle text output, input, audio, math, sprite animation, and utility functions. These are accessed via specific memory addresses in the 0xF300-0xFFFF range. The IDN-16 now includes **35 total system calls** with enhanced sprite animation capabilities for game development.
+
+#### Text/Console Functions
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
-| SYS_CLEAR_SCREEN    | 0x4300  | r1=fill_value | r1=success(1/0) | Clear the display with specified fill value |
-| SYS_PUT_CHAR        | 0x4302  | r1=x, r2=y, r3=char | r1=success(1/0) | Display a character at position |
-| SYS_PUT_STRING      | 0x4304  | r1=x, r2=y, r3=string_addr | r1=chars_displayed | Display a null-terminated string |
-| SYS_SET_CURSOR      | 0x4306  | r1=x, r2=y | r1=success(1/0) | Set text cursor position |
-| SYS_GET_CURSOR      | 0x4308  | - | r1=x, r2=y | Get current cursor position |
-| SYS_SCROLL_SCREEN   | 0x430A  | r1=lines | r1=lines_scrolled | Scroll screen up by specified lines |
-| SYS_SET_TILE        | 0x430C  | r1=x, r2=y, r3=tile_id | r1=success(1/0) | Place a tile in the tile buffer |
-| SYS_GET_TILE        | 0x430E  | r1=x, r2=y | r1=tile_id | Get tile at position |
-| SYS_CREATE_SPRITE   | 0x4310  | r1=id, r2=x, r3=y, r4=tile_id | r1=success(1/0) | Create and configure a sprite |
-| SYS_MOVE_SPRITE     | 0x4312  | r1=id, r2=new_x, r3=new_y | r1=success(1/0) | Move sprite to new position |
-| SYS_SET_SPRITE_TILE | 0x4314  | r1=sprite_id, r2=tile_id | r1=success(1/0) | Change sprite's tile |
-| SYS_HIDE_SPRITE     | 0x4316  | r1=sprite_id, r2=hide(1/0) | r1=success(1/0) | Hide or show sprite |
-| SYS_SET_PALETTE     | 0x4318  | r1=index, r2=color | r1=success(1/0) | Set palette color (RGB565) |
-| SYS_GET_PALETTE     | 0x431A  | r1=index | r1=color | Get palette color |
-| SYS_SET_VIDEO_MODE  | 0x431C  | r1=mode(0-2) | r1=success(1/0) | Change video mode (0=text, 1=tiles, 2=mixed) |
-| SYS_SET_SCROLL      | 0x431E  | r1=scroll_x, r2=scroll_y | r1=success(1/0) | Set background scroll position |
+| SYSCALL_CLEAR_SCREEN| 0xF300  | - | r1=success(1/0) | Clear entire 40x30 text screen |
+| SYSCALL_PUT_CHAR    | 0xF301  | r1=char | r1=success(1/0) | Put 8x8 character at cursor position |
+| SYSCALL_PUT_STRING  | 0xF302  | r1=string_addr, r2=max_length | r1=success(1/0) | Put string using 8x8 font |
+| SYSCALL_SET_CURSOR  | 0xF303  | r1=x, r2=y | - | Set text cursor position (x, y) |
+| SYSCALL_GET_CURSOR  | 0xF304  | - | r1=x, r2=y | Get current cursor position |
+| SYSCALL_PUT_CHAR_AT | 0xF305  | r1=x, r2=y, r3=char | - | Put character at specific position |
+| SYSCALL_SCROLL_UP   | 0xF306  | - | - | Scroll text screen up one line |
+| SYSCALL_FILL_AREA   | 0xF307  | r1=x, r2=y, r3=width, r4=height, r5=char | - | Fill rectangular area with character |
+| SYSCALL_SET_TEXT_COLOR | 0xF308 | r1=fg_color, r2=bg_color | - | Set foreground/background color |
+| SYSCALL_GET_INPUT   | 0xF309  | r1=controller | r1=button_state | Get keyboard input |
+| SYSCALL_PLAY_TONE   | 0xF30A  | r1=freq, r2=duration | r1=success(1/0) | Play audio tone |
+| SYSCALL_MULTIPLY    | 0xF30B  | r1=a, r2=b | r1=result_low, r2=result_high | 16-bit multiply operation |
+| SYSCALL_DIVIDE      | 0xF30C  | r1=dividend, r2=divisor | r1=quotient, r2=remainder | 16-bit divide operation |
+| SYSCALL_RANDOM      | 0xF30D  | - | r1=random_number | Generate random number |
+| SYSCALL_MEMCPY      | 0xF30E  | r1=dest, r2=src, r3=length | r1=bytes_copied | Memory copy operation |
+| SYSCALL_PRINT_HEX   | 0xF30F  | r1=number | - | Print number in hexadecimal |
+| SYSCALL_PRINT_DEC   | 0xF310  | r1=number | - | Print number in decimal |
+| SYSCALL_SET_SPRITE  | 0xF311  | r1=sprite_id, r2=x, r3=y, r4=tile_id | r1=success(1/0) | Set sprite position and tile |
+| SYSCALL_SET_PALETTE | 0xF312  | r1=palette_index, r2=color | r1=success(1/0) | Set palette color (RGB565) |
+| SYSCALL_MOVE_SPRITE | 0xF313  | r1=sprite_id, r2=new_x, r3=new_y | r1=success(1/0) | Move sprite to new position |
+| SYSCALL_SET_SPRITE_PIXEL | 0xF314 | r1=tile_id, r2=pixel_x, r3=pixel_y, r4=palette_index | r1=success(1/0) | Set individual sprite pixel color |
+| SYSCALL_GET_FRAME_COUNT | 0xF315 | - | r1=frame_count | Get current frame count |
+
+#### Sprite Animation Functions
+| Function            | Address | Inputs | Outputs | Description |
+|-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_HIDE_SPRITE | 0xF316  | r1=sprite_id | r1=success(1/0) | Hide sprite by moving off screen |
+| SYSCALL_GET_SPRITE_POS | 0xF317 | r1=sprite_id | r1=x, r2=y | Get sprite x,y position |
+| SYSCALL_CLEAR_SPRITE_RANGE | 0xF318 | r1=start_id, r2=end_id | r1=sprites_cleared | Clear sprite range |
+| SYSCALL_CHECK_COLLISION | 0xF319 | r1=sprite1_id, r2=sprite2_id | r1=collision(1/0) | Check 8x8 sprite collision |
+| SYSCALL_SHIFT_SPRITES | 0xF31A | r1=start_id, r2=count, r3=dx, r4=dy | r1=sprites_moved | Move multiple sprites with offset |
+| SYSCALL_COPY_SPRITE | 0xF31B | r1=src_id, r2=dest_id | r1=success(1/0) | Copy sprite properties |
+| SYSCALL_SET_RETURN_ADDR | 0xF31C | - | r1=success(1/0) | Set return address register (r7) to next instruction |
+| SYSCALL_MOVE_SPRITE_RIGHT | 0xF31D | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite right by N tiles |
+| SYSCALL_MOVE_SPRITE_LEFT | 0xF31E | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite left by N tiles |
+| SYSCALL_MOVE_SPRITE_UP | 0xF31F | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite up by N tiles |
+| SYSCALL_MOVE_SPRITE_DOWN | 0xF320 | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite down by N tiles |
+
+#### Timer Functions
+| Function            | Address | Inputs | Outputs | Description |
+|-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_TIMER_START | 0xF321 | r1=duration | r1=success(1/0) | Start timer with duration in milliseconds |
+| SYSCALL_TIMER_QUERY | 0xF322 | r1=stop_flag | r1=0 if complete, remaining_ms if not; r2=timer_state (1=stopped, 0=running) | Query timer status, optionally stop timer if r1=1 |
+| SYSCALL_SLEEP | 0xF323 | r1=duration | r1=success(1/0) | Set CPU sleep timer in milliseconds |
 
 #### Audio Functions  
 | Function          | Address | Inputs | Outputs | Description |
@@ -368,49 +531,204 @@ The IDN-16 includes a comprehensive System ROM with built-in functions accessibl
 
 **Basic Text Display:**
 ```assembly
-; Clear screen with space character
-LDI r1, 32              ; Space character
-JSR SYS_CLEAR_SCREEN    ; r1 = success
+; Clear screen 
+LOAD16 r1, 0xF300       ; SYSCALL_CLEAR_SCREEN
+JSR r1                  ; r1 = success
 
 ; Set cursor position  
 LDI r1, 10              ; x = 10
 LDI r2, 5               ; y = 5
-JSR SYS_SET_CURSOR      ; r1 = success
+LOAD16 r3, 0xF303       ; SYSCALL_SET_CURSOR
+JSR r3                  ; Set cursor
 
-; Display a string
-LDI r1, 0               ; x = 0 
-LDI r2, 0               ; y = 0
-LOAD16 r3, hello_msg    ; String address
-JSR SYS_PUT_STRING      ; r1 = characters displayed
-
-hello_msg:
-    .string "Hello IDN-16!"
+; Display a character
+LDI r1, 'H'             ; Character 'H'
+LOAD16 r2, 0xF301       ; SYSCALL_PUT_CHAR
+JSR r2                  ; r1 = success
 ```
 
-**Graphics and Sprites:**
+**Stack Management Example:**
 ```assembly
-; Set video mode to mixed (tiles + sprites)
-LDI r1, 2               ; Mixed mode
-JSR SYS_SET_VIDEO_MODE  ; r1 = success
+; Subroutine that preserves registers using PUSH/POP
+subroutine_example:
+    ; Initialize stack pointer (typically done at program start)
+    LOAD16 sp, 0xCFFF       ; Set stack to top of RAM
+    
+    ; Save registers before computation
+    PUSH r1
+    PUSH r2
+    PUSH r3
+    
+    ; Perform some computation
+    LDI r1, 10
+    LDI r2, 20
+    ADD r3, r1, r2          ; r3 = r1 + r2
+    
+    ; Call another subroutine (demonstrates nested calls)
+    LOAD16 r1, helper_function
+    JSR r1
+    
+    ; Restore registers in reverse order
+    POP r3
+    POP r2
+    POP r1
+    
+    RET
 
-; Set a tile
-LDI r1, 5               ; x = 5
-LDI r2, 3               ; y = 3  
-LDI r3, 42              ; tile_id = 42
-JSR SYS_SET_TILE        ; r1 = success
+helper_function:
+    ; This function can use PUSH/POP too
+    PUSH r4
+    PUSH r5
+    
+    ; Do some work...
+    LDI r4, 42
+    LDI r5, 24
+    ADD r4, r4, r5
+    
+    ; Restore and return
+    POP r5
+    POP r4
+    RET
+```
 
-; Create a sprite
-LDI r1, 0               ; sprite_id = 0
-LDI r2, 100             ; x = 100
-LDI r3, 50              ; y = 50
-LDI r4, 15              ; tile_id = 15
-JSR SYS_CREATE_SPRITE   ; r1 = success
+**Snake Game Example (using new sprite animation calls):**
+```assembly
+; Snake game movement logic using new animation system calls
+snake_update:
+    ; Check collision between snake head (sprite 0) and food (sprite 1)
+    LDI r1, 0               ; Snake head sprite ID
+    LDI r2, 1               ; Food sprite ID  
+    LOAD16 r3, 0xF319       ; SYSCALL_CHECK_COLLISION
+    JSR r3                  ; r1 = collision result
+    
+    CMP r1, r0              ; Check if collision occurred
+    JEQ no_food             ; Jump if no collision
+    
+    ; Food eaten - grow snake and create new food
+    LDI r1, 2               ; Start from snake body sprite 2
+    LDI r2, 10              ; Number of body segments  
+    LDI r3, -8              ; Move left by 8 pixels
+    LDI r4, 0               ; No vertical movement
+    LOAD16 r5, 0xF31A       ; SYSCALL_SHIFT_SPRITES
+    JSR r5                  ; Move snake body
+    
+    ; Hide old tail and create new food
+    LDI r1, 12              ; Last tail sprite
+    LOAD16 r2, 0xF316       ; SYSCALL_HIDE_SPRITE
+    JSR r2                  ; Hide tail
+    
+no_food:
+    ; Continue game logic...
 
-; Move the sprite
-LDI r1, 0               ; sprite_id = 0
-LDI r2, 120             ; new_x = 120
-LDI r3, 60              ; new_y = 60
-JSR SYS_MOVE_SPRITE     ; r1 = success
+**Directional Sprite Movement Example:**
+```assembly
+; Simple player movement using new directional syscalls
+player_movement:
+    ; Get input from controller 0
+    LDI r1, 0               ; Controller 0
+    LOAD16 r2, 0xF309       ; SYSCALL_GET_INPUT
+    JSR r2                  ; r1 = button state
+    
+    ; Check for movement input
+    LDI r3, 0x10            ; Up button bit (bit 4)
+    AND r4, r1, r3
+    CMP r4, r0
+    JEQ check_down
+    
+    ; Move player sprite up by 1 tile
+    LDI r1, 0               ; Player sprite ID
+    LDI r2, 1               ; Move 1 tile
+    LOAD16 r3, 0xF31F       ; SYSCALL_MOVE_SPRITE_UP
+    JSR r3
+    JMP movement_done
+    
+check_down:
+    LDI r3, 0x20            ; Down button bit (bit 5)
+    AND r4, r1, r3
+    CMP r4, r0
+    JEQ check_left
+    
+    ; Move player sprite down by 1 tile
+    LDI r1, 0               ; Player sprite ID
+    LDI r2, 1               ; Move 1 tile
+    LOAD16 r3, 0xF320       ; SYSCALL_MOVE_SPRITE_DOWN
+    JSR r3
+    JMP movement_done
+    
+check_left:
+    LDI r3, 0x40            ; Left button bit (bit 6)
+    AND r4, r1, r3
+    CMP r4, r0
+    JEQ check_right
+    
+    ; Move player sprite left by 1 tile
+    LDI r1, 0               ; Player sprite ID
+    LDI r2, 1               ; Move 1 tile
+    LOAD16 r3, 0xF31E       ; SYSCALL_MOVE_SPRITE_LEFT
+    JSR r3
+    JMP movement_done
+    
+check_right:
+    LDI r3, 0x80            ; Right button bit (bit 7)
+    AND r4, r1, r3
+    CMP r4, r0
+    JEQ movement_done
+    
+    ; Move player sprite right by 1 tile
+    LDI r1, 0               ; Player sprite ID
+    LDI r2, 1               ; Move 1 tile
+    LOAD16 r3, 0xF31D       ; SYSCALL_MOVE_SPRITE_RIGHT
+    JSR r3
+    
+movement_done:
+    ; Continue with other game logic...
+```
+
+### Sprite System (Direct Memory Access)
+
+Sprites are controlled by writing directly to video memory regions:
+
+**Memory Layout:**
+- **Palette RAM**: 0xD4D0-0xD4EF (16 colors × 2 bytes, RGB565 format)
+- **Sprite Table**: 0xD4F0-0xD5AF (64 sprites × 3 bytes: [X (up to 40), Y (up to 30), Tile_ID])
+- **Tileset Data**: 0xD5B0-0xEFFF (105 tiles × 64 bytes each: 8×8 pixel data, 1 byte palette index per pixel)
+
+**Sprite System Rules:**
+- Sprites are disabled when Tile_ID = 0
+- Palette index 0 = transparent (not rendered)
+- Palette indices 1-15 = visible colors
+- Palette indices 16+ = use previous valid palette color (1-15) from the current tile
+
+**Creating Sprites with Direct Memory Writes:**
+```assembly
+; Memory addresses
+PALETTE_RAM_START = 0xD4D0
+SPRITE_TABLE_START = 0xD4F0
+TILESET_DATA_START = 0xD5B0
+
+; Set up red color in palette slot 1
+LOAD16 r1, PALETTE_RAM_START
+ADDI r1, r1, 2                 ; Palette slot 1 (2 bytes per color)
+LOAD16 r2, 0xF800              ; Red color (RGB565)
+STW r2, [r1+0]                 ; Write to palette
+
+; Create red tile data (tile 0)
+LOAD16 r1, TILESET_DATA_START  ; Tile 0 base address
+LDI r2, 1                      ; Palette index 1 (red)
+STB r2, [r1+0]                 ; Pixel (0,0)
+STB r2, [r1+1]                 ; Pixel (1,0)
+STB r2, [r1+8]                 ; Pixel (0,1) - next row
+STB r2, [r1+9]                 ; Pixel (1,1)
+; ... continue for 8x8 pixels
+
+; Set up sprite 0 in sprite table
+LOAD16 r1, SPRITE_TABLE_START  ; Sprite table base
+LDI r2, 100                    ; X position
+STB r2, [r1+0]                 ; Write X coordinate
+LDI r2, 80                     ; Y position
+STB r2, [r1+1]                 ; Write Y coordinate
+LDI r2, 1                      ; Tile ID 1 (Tile_ID 0 = disabled)
+STB r2, [r1+2]                 ; Write tile ID
 ```
 
 **Audio Example:**
@@ -449,16 +767,18 @@ input_loop:
 ### CPU Architecture
 #### Registers
 The `IDN-16`'s CPU has 8 16-bit registers:
-| Register      | Purpose         |
-| ------------- | --------------- |
-| r0 / zero     | Always Zero     |
-| r1            | General         |
-| r2            | General         |
-| r3            | General         |
-| r4            | General         |
-| r5            | General         |
-| r6 / sp       | Stack Pointer   |
-| r7 / ra       | Return Address  |
+| Register      | Purpose         | Notes                    |
+| ------------- | --------------- | ------------------------ |
+| r0 / zero     | Always Zero     | **Hardwired to 0 - writes ignored** |
+| r1            | General         |                          |
+| r2            | General         |                          |
+| r3            | General         |                          |
+| r4            | General         |                          |
+| r5            | General         |                          |
+| r6 / sp       | Stack Pointer   |                          |
+| r7 / ra       | Return Address  |                          |
+
+**Important:** Register r0 is hardwired to always contain zero. Any attempt to write to r0 will be ignored and the register will remain 0. This is enforced in hardware and cannot be overridden.
 #### Status Flags
 Statuses are stored with a special flag register:
 - Zero (Z): Set when result is zero
@@ -495,16 +815,23 @@ All instructions are 16 bits wide:
 
 #### IMM-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                               |
-| ------- | ------------------------------------- | ------------------------------------|
-| 01000   | LDI rd, imm (8 bits)                  | Load immediate (MSB Extends)        |
-| 01001   | LDW rd, [rs1+imm]                     | Load word from memory               |
-| 01010   | STW rd, [rs1+imm]                     | Store word to memory                |
-| 01011   | ADDI rd, rs1, imm                     | Add immediate (MSB Extends)         |
-| 01100   | LUI rd, imm (8 bits)                  | Load immediate to upper 8 bits      |
-| 01101   | ANDI rd, rs1, imm                     | AND immediate                       |
-| 01110   | ORI rd, rs1, imm                      | OR immediate                        |
-| 01111   | XORI rd, rs1, imm                     | XOR immediate                       |
+| Opcode  | Assembly Syntax                       | Usage                               | Immediate Size & Range |
+| ------- | ------------------------------------- | ----------------------------------- | ---------------------- |
+| 01000   | LDI rd, imm                           | Load immediate (sign extends)       | 8 bits: -128 to +255   |
+| 01001   | LDW rd, [rs1+imm]                     | Load word from memory               | 5 bits: -16 to +31     |
+| 01010   | STW rd, [rs1+imm]                     | Store word to memory                | 5 bits: -16 to +31     |
+| 01011   | ADDI rd, rs1, imm                     | Add immediate (sign extends)        | 5 bits: -16 to +31     |
+| 01100   | LUI rd, imm                           | Load immediate to upper 8 bits      | 8 bits: 0 to 255       |
+| 01101   | ANDI rd, rs1, imm                     | AND immediate (no sign extension)   | 5 bits: 0 to 31        |
+| 01110   | ORI rd, rs1, imm                      | OR immediate (no sign extension)    | 5 bits: 0 to 31        |
+| 01111   | XORI rd, rs1, imm                     | XOR immediate (no sign extension)   | 5 bits: 0 to 31        |
+
+**Immediate Value Constraints:**
+- **8-bit immediates** (LDI, LUI): Use bits 7-0 of instruction, allowing larger values
+- **5-bit immediates** (all others): Use bits 4-0 of instruction  
+- **Sign extension**: LDI and ADDI sign-extend their immediates to 16 bits
+- **No sign extension**: LUI, ANDI, ORI, XORI use immediates as unsigned values
+- **Address offsets**: LDW/STW use sign-extended 5-bit offsets for base+offset addressing
 
 #### JB-Format Instructions
 
@@ -515,8 +842,8 @@ All instructions are 16 bits wide:
 | 10010   | JNE offset                            | Jump if not equal                   |
 | 10011   | JGT offset                            | Jump if greater than                |
 | 10100   | JLT offset                            | Jump if less than                   |
-| 10101   | JSR offset                            | Jump to subroutine + store pc in ra |
-| 10110   | RET                                   | Return from subroutine              |
+| 10101   | JSR reg                               | Jump to subroutine + store pc in ra |
+| 10110   | RET                                   | Return by jumping to address in ra  |
 
 #### SP-Format (and extra) Instructions
 
@@ -534,12 +861,13 @@ All instructions are 16 bits wide:
 ; This is a comment
 label:          ; Define a label
   LDI  sp, 10   ; Load immediate value 10 into r6
-  JSR  routine  ; Jump to subroutine "routine"
+  LOAD16 r5, routine  ; Load routine address into r5
+  JSR  r5       ; Jump to subroutine (JSR saves PC+2 to ra)
   HLT           ; Halt execution
 
 routine:
   MOV  r1, sp   ; Copy r6 to r1
-  RET           ; Return from subroutine
+  RET           ; Return from subroutine (jumps to address in ra)
 ```
 
 #### Variables and Constants
@@ -590,6 +918,23 @@ The assembler has support for pseudo-instructions / macros:
     LDI reg, imm16[7:0]
     LUI reg, imm16[15:8]
     ```
+- **PUSH** reg ->
+  - ```
+    ADDI sp, sp, -2
+    STW reg, [sp]
+    ```
+- **POP** reg ->
+  - ```
+    LDW reg, [sp]
+    ADDI sp, sp, 2
+    ```
+
+**Stack Behavior Notes:**
+- The stack grows downward from 0xCFFF (top of RAM) to 0x8000 (bottom of RAM)
+- Each PUSH decrements the stack pointer by 2 bytes (16-bit word size)
+- Each POP increments the stack pointer by 2 bytes  
+- Always POP in reverse order of PUSH to maintain stack integrity
+- Initialize the stack pointer with `LOAD16 sp, 0xCFFF` at program start
 
 #### Enhanced NOP Instruction
 The NOP instruction supports multiple forms for efficient padding and alignment:
@@ -643,7 +988,6 @@ The IDN-16 includes comprehensive development and debugging tools:
 
 **Graphics Development:**
 - Tile-based rendering system (40×30 tiles of 8×8 pixels)
-- Visual tile editor support through memory-mapped interface
 - Sprite management with hardware acceleration
 - Palette editor through direct memory access
 

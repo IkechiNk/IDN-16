@@ -118,26 +118,44 @@ char* disassemble_word(uint16_t word) {
 
     // JB-format
     if (opcode >= 0b10000 && opcode <= 0b10110) {
-        int32_t offset = sign_extend(word & 0x7FF, 11);
         switch (opcode) {
-        case 0b10000: sprintf(result, "JMP  %d\n", offset); 
-        pc += 2;
-        return result;
-        case 0b10001: sprintf(result, "JEQ  %d\n", offset); 
-        pc += 2;
-        return result;
-        case 0b10010: sprintf(result, "JNE  %d\n", offset); 
-        pc += 2;
-        return result;
-        case 0b10011: sprintf(result, "JGT  %d\n", offset); 
-        pc += 2;
-        return result;
-        case 0b10100: sprintf(result, "JLT  %d\n", offset); 
-        pc += 2;
-        return result;
-        case 0b10101: sprintf(result, "JSR  %d\n", offset); 
-        pc += 2;
-        return result;
+        case 0b10000: {
+            int32_t offset = sign_extend(word & 0x7FF, 11);
+            sprintf(result, "JMP  %d\n", offset); 
+            pc += 2;
+            return result;
+        }
+        case 0b10001: {
+            int32_t offset = sign_extend(word & 0x7FF, 11);
+            sprintf(result, "JEQ  %d\n", offset); 
+            pc += 2;
+            return result;
+        }
+        case 0b10010: {
+            int32_t offset = sign_extend(word & 0x7FF, 11);
+            sprintf(result, "JNE  %d\n", offset); 
+            pc += 2;
+            return result;
+        }
+        case 0b10011: {
+            int32_t offset = sign_extend(word & 0x7FF, 11);
+            sprintf(result, "JGT  %d\n", offset); 
+            pc += 2;
+            return result;
+        }
+        case 0b10100: {
+            int32_t offset = sign_extend(word & 0x7FF, 11);
+            sprintf(result, "JLT  %d\n", offset); 
+            pc += 2;
+            return result;
+        }
+        case 0b10101: {
+            // JSR now uses register format: rs1 contains the target address
+            uint8_t rs1 = (word >> 5) & 0x07;
+            sprintf(result, "JSR  r%d\n", rs1); 
+            pc += 2;
+            return result;
+        }
         case 0b10110: sprintf(result, "RET\n"); 
         pc += 2;
         return result;

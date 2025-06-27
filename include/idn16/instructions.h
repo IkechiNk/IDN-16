@@ -57,7 +57,6 @@ void ldi(uint16_t rd, uint16_t imm, Cpu_t *cpu);
 void ldw(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
 void stw(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
 void addi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
-void subi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
 void andi(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
 void ori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
 void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu);
@@ -66,7 +65,7 @@ void jeq(uint16_t imm, Cpu_t *cpu);
 void jne(uint16_t imm, Cpu_t *cpu);
 void jgt(uint16_t imm, Cpu_t *cpu);
 void jlt(uint16_t imm, Cpu_t *cpu);
-void jsr(uint16_t imm, Cpu_t *cpu);
+void jsr(uint16_t rs1, Cpu_t *cpu);
 void ret(Cpu_t *cpu);
 
 void hlt(Cpu_t *cpu);

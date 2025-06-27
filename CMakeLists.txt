@@ -8,6 +8,10 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Find required packages for assembler
+find_package(FLEX REQUIRED)
+find_package(BISON REQUIRED)
+
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
@@ -55,31 +59,25 @@ set(CORE_SOURCES
 	src/core/memory.c
 	src/core/instructions.c
 	src/core/syscalls.c
-	src/core/runner.c
 	src/core/io/display.c
 	src/core/io/keyboard.c
 	src/tools/disassembler/dasm.c
 )
 
-# Clay UI source files
-set(CLAY_SOURCES
-	lib/clay/SDL3/clay_renderer_SDL3.c
-)
-
-# Clay UI source files
+# SFD source files
 set(SFD_SOURCES
 	lib/sfd/sfd.c
 )
 
-set(SOURCES 
+# === MAIN EMULATOR ===
+set(EMULATOR_SOURCES 
 	src/main.c
 	${CORE_SOURCES}
 	${SFD_SOURCES}
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${EMULATOR_SOURCES})
 
-# Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
 	include
 	lib/clay
@@ -92,9 +90,134 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	SDL3_image::SDL3_image
 )
 
+# === ASSEMBLER ===
+# Generate parser and lexer files
+set(ASM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/assembler)
+set(PARSER_OUTPUT ${ASM_DIR}/parser.tab.c)
+set(PARSER_HEADER ${ASM_DIR}/parser.tab.h)
+set(LEXER_OUTPUT ${ASM_DIR}/lex.yy.c)
+
+# Bison for parser
+add_custom_command(
+	OUTPUT ${PARSER_OUTPUT} ${PARSER_HEADER}
+	COMMAND ${BISON_EXECUTABLE} -Wcex -d -o ${PARSER_OUTPUT} ${ASM_DIR}/parser.y
+	DEPENDS ${ASM_DIR}/parser.y
+	COMMENT "Generating parser with Bison"
+)
+
+# Flex for lexer  
+add_custom_command(
+	OUTPUT ${LEXER_OUTPUT}
+	COMMAND ${FLEX_EXECUTABLE} -o ${LEXER_OUTPUT} ${ASM_DIR}/lexer.l
+	DEPENDS ${ASM_DIR}/lexer.l ${PARSER_HEADER}
+	COMMENT "Generating lexer with Flex"
+)
+
+set(ASSEMBLER_SOURCES
+	${LEXER_OUTPUT}
+	${PARSER_OUTPUT}
+	src/tools/assembler/asm_main.c
+	src/tools/assembler/codegen.c
+	src/tools/assembler/symbol_table.c
+)
+
+add_executable(idn16-asm ${ASSEMBLER_SOURCES})
+
+target_include_directories(idn16-asm PRIVATE include)
+target_link_libraries(idn16-asm PRIVATE ${FLEX_LIBRARIES})
+
+# === DISASSEMBLER ===
+set(DISASSEMBLER_SOURCES
+	src/tools/disassembler/disassembler.c
+	src/tools/disassembler/dasm.c
+)
+
+add_executable(idn16-dasm ${DISASSEMBLER_SOURCES})
+target_include_directories(idn16-dasm PRIVATE include)
+
+# === TESTS ===
+enable_testing()
+
+# Unity test framework
+set(UNITY_SOURCES tests/unity/unity.c)
+
+# Memory tests
+add_executable(test_memory 
+	tests/core/test_memory.c
+	${UNITY_SOURCES}
+	src/core/memory.c
+	src/core/instructions.c
+	src/core/cpu.c
+	src/core/syscalls.c
+	src/tools/disassembler/dasm.c
+)
+target_include_directories(test_memory PRIVATE include tests/unity)
+target_link_libraries(test_memory PRIVATE SDL3::SDL3)
+add_test(NAME memory_test COMMAND test_memory)
+
+# CPU tests
+add_executable(test_cpu
+	tests/core/test_cpu.c  
+	${UNITY_SOURCES}
+	src/core/cpu.c
+	src/core/memory.c
+	src/core/instructions.c
+	src/core/syscalls.c
+	src/tools/disassembler/dasm.c
+)
+target_include_directories(test_cpu PRIVATE include tests/unity)
+target_link_libraries(test_cpu PRIVATE SDL3::SDL3)
+add_test(NAME cpu_test COMMAND test_cpu)
+
+# Symbol table tests
+add_executable(test_symbol_table
+	tests/tools/test_symbol_table.c
+	${UNITY_SOURCES}
+	src/tools/assembler/symbol_table.c
+)
+target_include_directories(test_symbol_table PRIVATE include tests/unity)
+add_test(NAME symbol_table_test COMMAND test_symbol_table)
+
+# Disassembler tests  
+add_executable(test_disassembler
+	tests/tools/test_disassembler.c
+	${UNITY_SOURCES}
+	src/tools/disassembler/dasm.c
+)
+target_include_directories(test_disassembler PRIVATE include tests/unity)
+add_test(NAME disassembler_test COMMAND test_disassembler)
+
+# Codegen tests
+add_executable(test_codegen
+	tests/tools/test_codegen.c
+	${UNITY_SOURCES}
+	src/tools/assembler/codegen.c
+	src/tools/assembler/symbol_table.c
+)
+target_include_directories(test_codegen PRIVATE include tests/unity)
+add_test(NAME codegen_test COMMAND test_codegen)
+
+# === RESOURCE COPYING ===
 add_custom_command(
 	TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 		${CMAKE_CURRENT_SOURCE_DIR}/resources
 		${CMAKE_CURRENT_BINARY_DIR}/resources
+	COMMENT "Copying resources to build directory"
+)
+
+# === CUSTOM TARGETS ===
+# Build all tools
+add_custom_target(tools DEPENDS idn16-asm idn16-dasm)
+
+# Build everything
+add_custom_target(all_targets DEPENDS ${PROJECT_NAME} tools)
+
+# Run all tests
+add_custom_target(run_tests COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+
+# Clean generated files
+add_custom_target(clean_generated
+	COMMAND ${CMAKE_COMMAND} -E remove -f ${LEXER_OUTPUT} ${PARSER_OUTPUT} ${PARSER_HEADER}
+	COMMENT "Cleaning generated parser/lexer files"
 )
