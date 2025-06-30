@@ -1,11 +1,15 @@
 #include "idn16/cpu.h"
 #include "idn16/instructions.h"
+#include "idn16/dasm.h"
 #include <stdio.h>
 #include <string.h>
-#include "idn16/dasm.h"
+#include <time.h>
 
 Cpu_t* cpu_init(void)
 {
+    // Intialize random number generator (not cryptographically secure, but sufficient for this use case)
+    srand(time(NULL));
+
     Cpu_t* cpu = malloc(sizeof(Cpu_t));
     if (!cpu) {
         return NULL;

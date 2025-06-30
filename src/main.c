@@ -47,6 +47,7 @@ bool cycling = false;
 static int visible_menu = -1;
 
 static FILE* loaded_rom_file = NULL;
+static uint64_t sleep_from = 0;
 
 // Persistent buffers for register display
 static char register_text_buffers[8][32];
@@ -136,7 +137,7 @@ void view_display_settings() { printf("Display Settings\n"); }
 void view_assembly_listing() { printf("Assembly Listing\n"); }
 void view_symbol_table() { printf("Symbol Table\n"); }
 
-void run_start_resume() { cycling = true; }
+void run_start_resume() { if (loaded_rom_file) cycling = true; }
 void run_pause() { cycling = false;}
 void run_step_instruction() { 
     if (loaded_rom_file) {
@@ -478,13 +479,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
 /* This function runs when a new event (mouse input, keypresses, etc) occurs. */
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-    key_handler(display, event);
-
     switch (event->type) {
         case SDL_EVENT_QUIT:
             cpu->running = false;
             break;
+        case SDL_EVENT_KEY_DOWN:
+            key_handler(display, event);
+            break;
         case SDL_EVENT_KEY_UP:
+            key_handler(display, event);
             if (event->key.key == SDLK_ESCAPE) {
                 cpu->running = false;
             } else if (event->key.key == SDLK_F1) {
@@ -534,28 +537,27 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     SDL_RenderPresent(renderer);
 
-    uint64_t last_frame_time = SDL_GetTicks();
 
     for (int i = 0; (i < CYCLES_PER_FRAME) && cycling && cpu->running && cpu->sleep_timer == 0; i++) {
         cpu_cycle(cpu, debug_mode);
+
     }
-    if (cpu->sleep_timer > 0) {
-        fflush(stdout);
-        SDL_Delay(cpu->sleep_timer);
-        cpu->sleep_timer = 0;
+    if (cpu->sleep_timer > 0 && sleep_from == 0) {
+        sleep_from = SDL_GetTicks();
+    }
+    if (cpu->sleep_timer > 0 && sleep_from > 0) {
+        uint64_t elapsed = SDL_GetTicks() - sleep_from;
+        if (elapsed >= cpu->sleep_timer) {
+            cpu->sleep_timer = 0;
+            sleep_from = 0;
+        }
     }
 
     // Increment frame counter every frame
     if (cycling && cpu->running) {
         cpu->frame_count++;
     }
-    uint64_t current_time = SDL_GetTicks();
-    // Enforce 60fps timing (16.67ms per frame)
-    uint64_t frame_duration = current_time - last_frame_time;
-    if (frame_duration < MS_PER_FRAME) {
-        SDL_Delay(MS_PER_FRAME - frame_duration);
-    }
-    
+
     return SDL_APP_CONTINUE;
 }
 

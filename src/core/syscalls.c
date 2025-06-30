@@ -96,27 +96,26 @@ void syscall_multiply(Cpu_t* cpu) {
 }
 
 void syscall_divide(Cpu_t* cpu) {
-    int16_t dividend = (int16_t)cpu->r[1];
-    int16_t divisor = (int16_t)cpu->r[2];
-    
+    uint16_t dividend = (uint16_t)cpu->r[1];
+    uint16_t divisor = (uint16_t)cpu->r[2];
+
+    // Division by zero
     if (divisor == 0) {
-        cpu->r[1] = 0; // Division by zero
+        cpu->r[1] = 0; 
         cpu->r[2] = 0;
         return;
     }
     
-    int16_t quotient = dividend / divisor;
-    int16_t remainder = dividend % divisor;
+    uint16_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
     
     cpu->r[1] = (uint16_t)quotient;
     cpu->r[2] = (uint16_t)remainder;
 }
 
 void syscall_random(Cpu_t* cpu) {
-    // Simple linear congruential generator (not cryptographically secure)
-    static uint32_t seed = 1;
-    seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
-    cpu->r[1] = (uint16_t)(seed & 0xFFFF);
+    uint16_t value = ((uint16_t)rand() & 0xFFFF);
+    cpu->r[1] = value;
 }
 
 void syscall_memcpy(Cpu_t* cpu) {
@@ -235,13 +234,15 @@ void syscall_set_sprite(Cpu_t* cpu) {
     uint8_t y = cpu->r[3] & 0xFF;
     uint8_t tile_id = cpu->r[4] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES || tile_id > MAX_TILES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
     
     // Validate tile coordinates (0-39 for x, 0-29 for y)
     if (x >= SCREEN_WIDTH_TILES || y >= SCREEN_HEIGHT_TILES) {
+        printf("Invalid tile coordinates: x=%d, y=%d\n", x, y);
+        fflush(stdout);
         cpu->r[1] = 0; // Error: invalid tile coordinates
         return;
     }
@@ -258,7 +259,7 @@ void syscall_set_palette(Cpu_t* cpu) {
     uint8_t palette_index = cpu->r[1] & 0xFF;
     uint16_t color = cpu->r[2];
     
-    if (palette_index >= 64) {
+    if (palette_index >= PALETTE_SIZE) {
         cpu->r[1] = 0; // Error: invalid palette index
         return;
     }
@@ -274,7 +275,7 @@ void syscall_move_sprite(Cpu_t* cpu) {
     uint8_t new_x = cpu->r[2] & 0xFF;
     uint8_t new_y = cpu->r[3] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -332,7 +333,7 @@ void syscall_get_frame_count(Cpu_t* cpu) {
 void syscall_hide_sprite(Cpu_t* cpu) {
     uint8_t sprite_id = cpu->r[1] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -347,7 +348,7 @@ void syscall_hide_sprite(Cpu_t* cpu) {
 void syscall_get_sprite_pos(Cpu_t* cpu) {
     uint8_t sprite_id = cpu->r[1] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         cpu->r[2] = 0;
         return;
@@ -369,7 +370,7 @@ void syscall_clear_sprite_range(Cpu_t* cpu) {
     uint8_t start_id = cpu->r[1] & 0xFF;
     uint8_t end_id = cpu->r[2] & 0xFF;
     
-    if (start_id >= 64 || end_id >= 64 || start_id > end_id) {
+    if (start_id >= MAX_SPRITES || end_id >= MAX_SPRITES || start_id > end_id) {
         cpu->r[1] = 0; // Error: invalid sprite range
         return;
     }
@@ -387,7 +388,7 @@ void syscall_check_collision(Cpu_t* cpu) {
     uint8_t sprite1_id = cpu->r[1] & 0xFF;
     uint8_t sprite2_id = cpu->r[2] & 0xFF;
     
-    if (sprite1_id >= 64 || sprite2_id >= 64) {
+    if (sprite1_id >= MAX_SPRITES || sprite2_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -410,15 +411,7 @@ void syscall_check_collision(Cpu_t* cpu) {
         cpu->r[1] = 0; // No collision
         return;
     }
-    
-    // Convert tile coordinates to pixel coordinates for collision detection
-    uint16_t px1 = x1 * 8, py1 = y1 * 8;
-    uint16_t px2 = x2 * 8, py2 = y2 * 8;
-    
-    // Check for 8x8 sprite collision (simple bounding box)
-    bool collision = (px1 < px2 + 8 && px1 + 8 > px2 && py1 < py2 + 8 && py1 + 8 > py2);
-    
-    cpu->r[1] = collision ? 1 : 0; // Return collision result
+    cpu->r[1] = ((x1 == x2) && (y1 == y2)); // Return collision result
 }
 
 void syscall_shift_sprites(Cpu_t* cpu) {
@@ -427,7 +420,7 @@ void syscall_shift_sprites(Cpu_t* cpu) {
     int8_t dx = (int8_t)(cpu->r[3] & 0xFF);
     int8_t dy = (int8_t)(cpu->r[4] & 0xFF);
     
-    if (start_id >= 64 || (start_id + count) > 64) {
+    if (start_id >= MAX_SPRITES || (start_id + count) > MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite range
         return;
     }
@@ -461,7 +454,7 @@ void syscall_copy_sprite(Cpu_t* cpu) {
     uint8_t src_id = cpu->r[1] & 0xFF;
     uint8_t dest_id = cpu->r[2] & 0xFF;
     
-    if (src_id >= 64 || dest_id >= 64) {
+    if (src_id >= MAX_SPRITES || dest_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -489,7 +482,7 @@ void syscall_move_sprite_right(Cpu_t* cpu) {
     uint8_t sprite_id = cpu->r[1] & 0xFF;
     uint8_t tiles = cpu->r[2] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -511,7 +504,7 @@ void syscall_move_sprite_left(Cpu_t* cpu) {
     uint8_t sprite_id = cpu->r[1] & 0xFF;
     uint8_t tiles = cpu->r[2] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -533,7 +526,7 @@ void syscall_move_sprite_up(Cpu_t* cpu) {
     uint8_t sprite_id = cpu->r[1] & 0xFF;
     uint8_t tiles = cpu->r[2] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }
@@ -555,7 +548,7 @@ void syscall_move_sprite_down(Cpu_t* cpu) {
     uint8_t sprite_id = cpu->r[1] & 0xFF;
     uint8_t tiles = cpu->r[2] & 0xFF;
     
-    if (sprite_id >= 64) {
+    if (sprite_id >= MAX_SPRITES) {
         cpu->r[1] = 0; // Error: invalid sprite ID
         return;
     }

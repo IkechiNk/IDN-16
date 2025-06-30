@@ -29,9 +29,9 @@
 #define PALETTE_RAM_START 0xD4D0
 #define PALETTE_RAM_END 0xD4EF            // 16 colors x 2 bytes = 32 bytes
 #define SPRITE_TABLE_START 0xD4F0  
-#define SPRITE_TABLE_END 0xD5AF           // 64 sprites x 3 bytes = 192 bytes
-#define TILESET_DATA_START 0xD5B0
-#define TILESET_DATA_END 0xEFFF           // 105 tiles x 64 bytes each
+#define SPRITE_TABLE_END 0xE2FF           // 1200 sprites x 3 bytes = 3600 bytes
+#define TILESET_DATA_START 0xE300
+#define TILESET_DATA_END 0xEFFF           // 51 tiles x 64 bytes each
 
 // I/O and System Control - 4KB total
 #define AUDIO_REG_START 0xF000
@@ -51,8 +51,8 @@
 #define TILE_SIZE 8
 #define SCREEN_WIDTH_PIXELS (SCREEN_WIDTH_TILES * TILE_SIZE)
 #define SCREEN_HEIGHT_PIXELS (SCREEN_HEIGHT_TILES * TILE_SIZE)
-#define MAX_SPRITES 64
-#define MAX_TILES 105
+#define MAX_SPRITES 1200
+#define MAX_TILES 51
 #define PALETTE_SIZE 16
 
 // Video Control Register Offsets

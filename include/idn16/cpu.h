@@ -136,6 +136,7 @@ void syscall_move_sprite_up(Cpu_t* cpu);
 void syscall_move_sprite_down(Cpu_t* cpu);
 void syscall_timer_start(Cpu_t* cpu);
 void syscall_timer_stop(Cpu_t* cpu);
+void syscall_timer_query(Cpu_t* cpu);
 void syscall_sleep(Cpu_t* cpu);
 
 #endif // IDN16_CPU_H

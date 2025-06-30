@@ -378,14 +378,14 @@ The video system uses a tile-based architecture with the following sub-regions:
 0xD000-0xD4AF: Character Buffer (40x30 characters = 1200 bytes)
 0xD4B0-0xD4CF: Video Control Registers (32 bytes)
 0xD4D0-0xD4EF: Palette RAM (16 colors x 2 bytes RGB565 = 32 bytes)
-0xD4F0-0xD5AF: Sprite Table (64 sprites x 3 bytes = 192 bytes)
-0xD5B0-0xEFFF: Tileset Data (105 tiles x 64 bytes each, 8x8 pixels per tile)
+0xD4F0-0xE2FF: Sprite Table (1200 sprites x 3 bytes = 3600 bytes)
+0xE300-0xEFFF: Tileset Data (51 tiles x 64 bytes each, 8x8 pixels per tile)
 ```
 
 **Display Specifications:**
 - Resolution: 320x240 pixels (40x30 tiles, 8x8 pixels per tile)
 - Colors: 16-color palette using RGB565 format
-- Sprites: Up to 64 hardware sprites with priority layers and flipping
+- Sprites: Up to 1200 hardware sprites with priority layers and flipping
 - Architecture: Dual-mode system (text via syscalls, sprites via memory)
 - Features: Smooth scrolling backgrounds, no complex pixel manipulation needed
 ### IO-Interfacing
@@ -476,7 +476,7 @@ System calls handle text output, input, audio, math, sprite animation, and utili
 #### Sprite Animation Functions
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
-| SYSCALL_HIDE_SPRITE | 0xF316  | r1=sprite_id | r1=success(1/0) | Hide sprite by moving off screen |
+| SYSCALL_HIDE_SPRITE | 0xF316  | r1=sprite_id | r1=success(1/0) | Hide sprite by setting tile_id to 0 |
 | SYSCALL_GET_SPRITE_POS | 0xF317 | r1=sprite_id | r1=x, r2=y | Get sprite x,y position |
 | SYSCALL_CLEAR_SPRITE_RANGE | 0xF318 | r1=start_id, r2=end_id | r1=sprites_cleared | Clear sprite range |
 | SYSCALL_CHECK_COLLISION | 0xF319 | r1=sprite1_id, r2=sprite2_id | r1=collision(1/0) | Check 8x8 sprite collision |
@@ -514,8 +514,6 @@ System calls handle text output, input, audio, math, sprite animation, and utili
 | Function | Address | Inputs | Outputs | Description |
 |----------|---------|--------|---------|-------------|
 | SYS_MULTIPLY | 0x4600 | r1=multiplicand, r2=multiplier | r1=result_low, r2=result_high | 16-bit multiplication |
-| SYS_DIVIDE | 0x4602 | r1=dividend, r2=divisor | r1=quotient, r2=remainder | 16-bit division |
-| SYS_RANDOM | 0x4604 | - | r1=random_number | Generate random number |
 | SYS_ABS | 0x4606 | r1=signed_value | r1=absolute_value | Get absolute value |
 
 #### Memory/Utility Functions
@@ -690,8 +688,8 @@ Sprites are controlled by writing directly to video memory regions:
 
 **Memory Layout:**
 - **Palette RAM**: 0xD4D0-0xD4EF (16 colors × 2 bytes, RGB565 format)
-- **Sprite Table**: 0xD4F0-0xD5AF (64 sprites × 3 bytes: [X (up to 40), Y (up to 30), Tile_ID])
-- **Tileset Data**: 0xD5B0-0xEFFF (105 tiles × 64 bytes each: 8×8 pixel data, 1 byte palette index per pixel)
+- **Sprite Table**: 0xD4F0-0xE2FF (1200 sprites × 3 bytes: [X (up to 40), Y (up to 30), Tile_ID])
+- **Tileset Data**: 0xE300-0xEFFF (51 tiles × 64 bytes each: 8×8 pixel data, 1 byte palette index per pixel)
 
 **Sprite System Rules:**
 - Sprites are disabled when Tile_ID = 0
@@ -877,7 +875,7 @@ The assembler supports variable and constant definitions that can be used throug
 ; Define constants
 SCREEN_WIDTH = 320
 SCREEN_HEIGHT = 240
-MAX_SPRITES = 64
+MAX_SPRITES = 1200
 
 ; Define memory addresses
 VIDEO_BASE = 0x3000
