@@ -1,7 +1,7 @@
 #ifndef IDN16_CPU_H
 #define IDN16_CPU_H
 
-#define CPU_CLOCK_HZ 100000  // 5 MHz CPU
+#define CPU_CLOCK_HZ 1000000 // 1MHz clock speed
 #define DISPLAY_REFRESH_HZ 60 // 60hz
 #define CYCLES_PER_FRAME (CPU_CLOCK_HZ / DISPLAY_REFRESH_HZ)
 #define MS_PER_FRAME (int)(1000 / DISPLAY_REFRESH_HZ)

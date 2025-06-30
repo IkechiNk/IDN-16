@@ -5,6 +5,10 @@
 ; MEMORY ADDRESSES AND CONSTANTS
 ; =============================================================================
 
+; Generic constants
+STARTING_SIZE = 1000
+
+
 ; Hardware addresses
 PALETTE_RAM_START = 0xD4D0
 SPRITE_TABLE_START = 0xD4F0
@@ -17,11 +21,11 @@ SNAKE_X = 0x8000            ; Snake head X position
 SNAKE_Y = 0x8001            ; Snake head Y position
 SNAKE_DIR_ADDR = 0x8002     ; Snake direction (0=right, 1=down, 2=left, 3=up)
 SNAKE_LEN = 0x8003          ; Snake length
-APPLE_X = 0x8004            ; Apple X position
-APPLE_Y = 0x8005            ; Apple Y position
-APPLE_ACTIVE = 0x8006       ; Apple spawn state
-TEMP_X = 0x8007             ; Holder Y for body moving
-TEMP_Y = 0x8008             ; Holder Y for body moving
+APPLE_X = 0x8005            ; Apple X position
+APPLE_Y = 0x8006            ; Apple Y position
+APPLE_ACTIVE = 0x8007       ; Apple spawn state
+TEMP_X = 0x8008             ; Holder Y for body moving
+TEMP_Y = 0x8009             ; Holder Y for body moving
 
 ; Input constants
 INPUT_W = 16                ; Up (W key) - bit 4
@@ -77,11 +81,11 @@ start:
     LOAD16 r1, SNAKE_Y
     STB r0, [r1]
     LOAD16 r1, SNAKE_DIR_ADDR
-    LDI r2, DIR_RIGHT       ; Start moving right
+    LDI r2, DIR_RIGHT        ; Start moving right
     STB r2, [r1]
     LOAD16 r1, SNAKE_LEN
-    LDI r2, 0               ; spawn_apple will increment to 1 appropiately
-    STB r2, [r1]
+    LOAD16 r2, STARTING_SIZE ; spawn_apple will increment by 1 before main loop
+    STW r2, [r1]
     LOAD16 r1, APPLE_ACTIVE
     LDI r2, 0
     STB r2, [r1]
@@ -304,7 +308,7 @@ move_body:
 
     LOAD16 r1, SNAKE_HEAD_SPRITE ; Sprite pointer
     LOAD16 r5, SNAKE_LEN    ; Counter
-    LDB r5, [r5]
+    LDW r5, [r5]
     CMP r5, r0
     JEQ func_done
 loop:
@@ -421,9 +425,9 @@ spawn_apple:
     PUSH ra
 
     LOAD16 r1, SNAKE_LEN
-    LDB r2, [r1]
+    LDW r2, [r1]
     addi r2, r2, 1
-    STB r2, [r1]
+    STW r2, [r1]
 
     ; Random Y
     LOAD16 r1, SYSCALL_RANDOM

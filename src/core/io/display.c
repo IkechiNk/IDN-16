@@ -157,8 +157,8 @@ void render_text_mode(display_t* display) {
     }
 
     // Render text grid (40x30 characters)
-    for (int y = 0; y < 30; y++) {
-        for (int x = 0; x < 40; x++) {
+    for (int y = 0; y < SCREEN_HEIGHT_TILES; y++) {
+        for (int x = 0; x < SCREEN_WIDTH_TILES; x++) {
             uint16_t tile_addr = CHAR_BUFFER_START + (y * 40 + x);
             uint8_t ch = memory_read_byte(display->memory, tile_addr);
             
@@ -174,14 +174,14 @@ void render_text_mode(display_t* display) {
 
 // Sprite rendering functions
 void render_sprites(display_t* display) {
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < MAX_SPRITES; i++) {
         uint16_t sprite_addr = SPRITE_TABLE_START + (i * 3);
         uint8_t sprite_x = memory_read_byte(display->memory, sprite_addr + 0);
         uint8_t sprite_y = memory_read_byte(display->memory, sprite_addr + 1);
         uint8_t tile_id = memory_read_byte(display->memory, sprite_addr + 2);
         
         // Skip if sprite is disabled (tile_id = 0) or off-screen
-        if (tile_id == 0 || sprite_x >= 40 || sprite_y >= 30) {
+        if (tile_id == 0 || tile_id >= MAX_TILES || sprite_x >= SCREEN_WIDTH_TILES || sprite_y >= SCREEN_HEIGHT_TILES) {
             continue;
         }
         
@@ -208,9 +208,9 @@ void render_sprite_to_buffer(display_t* display, uint8_t id, uint16_t x, uint16_
             if (palette_index == 0) continue;
             
             // Use previous valid palette if index is 16+
-            if (palette_index >= 16) {
+            if (palette_index >= PALETTE_SIZE) {
                 palette_index = prev_palette_index;
-            } else if (palette_index >= 1 && palette_index <= 15) {
+            } else if (palette_index > 0 && palette_index < PALETTE_SIZE) {
                 prev_palette_index = palette_index; // Update previous valid index
             }
             int final_x = x + px;
@@ -227,7 +227,7 @@ void render_sprite_to_buffer(display_t* display, uint8_t id, uint16_t x, uint16_
 
 uint16_t get_palette_color(display_t *display, uint8_t palette_index) {
     // Palette index should be 1-15 when this function is called
-    if (palette_index < 1 || palette_index > 15) palette_index = 1;
+    if (palette_index == 0 || palette_index >= PALETTE_SIZE) palette_index = 1;
     uint16_t color_addr = PALETTE_RAM_START + (palette_index * 2);
     return memory_read_word(display->memory, color_addr);
 }
