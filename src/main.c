@@ -43,6 +43,8 @@ const float ScreenHeight = 792.0f;
 void *clay_mem;
 
 bool debug_mode = false;
+bool display_registers = false;
+bool display_assembly = false;
 bool cycling = false;
 static int visible_menu = -1;
 
@@ -109,7 +111,6 @@ void file_close_rom() {
     run_reset_cpu();
     printf("Closing ROM...\n"); 
 }
-
 void file_open_rom() { 
     file_close_rom();
     printf("Opening ROM...\n");
@@ -127,15 +128,13 @@ void file_open_rom() {
         printf("Open canceled\n");
     }
 }
-
 void file_exit() { cpu->running = false; }
 
 void view_debug_mode() { debug_mode = !debug_mode; printf("Debug mode: %s\n", debug_mode ? "ON" : "OFF"); }
 void view_memory_viewer() { if (debug_mode) memory_dump(cpu->memory, 0x0000, 64, 16); }
-void view_cpu_registers() { printf("CPU Registers view\n"); }
+void view_cpu_registers() { display_registers = !display_registers; }
 void view_display_settings() { printf("Display Settings\n"); }
-void view_assembly_listing() { printf("Assembly Listing\n"); }
-void view_symbol_table() { printf("Symbol Table\n"); }
+void view_assembly_listing() { display_assembly = !display_assembly; }
 
 void run_start_resume() { if (loaded_rom_file) cycling = true; }
 void run_pause() { cycling = false;}
@@ -169,12 +168,10 @@ void run_reset_cpu() {
 void tools_assembler() { printf("Assembler\n"); }
 void tools_disassembler() { printf("Disassembler\n"); }
 void tools_memory_editor() { printf("Memory Editor\n"); }
-void tools_rom_manager() { printf("ROM Manager\n"); }
 
 void debug_breakpoints() { printf("Breakpoints\n"); }
 void debug_call_stack() { printf("Call Stack\n"); }
 void debug_memory_dump() { printf("Memory Dump\n"); }
-void debug_io_monitor() { printf("I/O Monitor\n"); }
 
 void options_emulation_speed() { printf("Emulation Speed\n"); }
 void options_audio_settings() { printf("Audio Settings\n"); }
@@ -185,13 +182,12 @@ void options_preferences() { printf("Preferences\n"); }
 typedef void (*MenuAction)(void);
 
 MenuAction file_actions[] = { file_open_rom, file_close_rom, file_exit };
-MenuAction view_actions[] = { view_debug_mode, view_memory_viewer, view_cpu_registers, view_display_settings, view_assembly_listing, view_symbol_table };
+MenuAction view_actions[] = { view_debug_mode, view_memory_viewer, view_cpu_registers, view_assembly_listing };
 MenuAction run_actions[] = { run_start_resume, run_pause, run_step_instruction, run_reset_cpu };
-MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_editor, tools_rom_manager };
-MenuAction debug_actions[] = { debug_breakpoints, debug_call_stack, debug_memory_dump, debug_io_monitor };
-MenuAction options_actions[] = { options_emulation_speed, options_audio_settings, options_graphics_settings, options_input_configuration, options_preferences };
+MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_editor };
+MenuAction debug_actions[] = { debug_breakpoints, debug_call_stack, debug_memory_dump };
 
-MenuAction* menu_action_arrays[] = { file_actions, view_actions, run_actions, tools_actions, debug_actions, options_actions };
+MenuAction* menu_action_arrays[] = { file_actions, view_actions, run_actions, tools_actions, debug_actions };
 
 void Header_Menu_Item_Click(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
     if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
@@ -278,7 +274,6 @@ Clay_String *view_menu_items[] = {
     &CLAY_STRING("CPU Registers"),
     &CLAY_STRING("Display Settings"),
     &CLAY_STRING("Assembly Listing"),
-    &CLAY_STRING("Symbol Table"),
     NULL
 };
 // Run menu items
@@ -305,15 +300,6 @@ Clay_String *debug_menu_items[] = {
     &CLAY_STRING("I/O Monitor"),
     NULL
 };
-// Options menu items
-Clay_String *options_menu_items[] = {
-    &CLAY_STRING("Emulation Speed"),
-    &CLAY_STRING("Audio Settings"),
-    &CLAY_STRING("Graphics Settings"),
-    &CLAY_STRING("Input Configuration"),
-    &CLAY_STRING("Preferences"),
-    NULL
-};
 
 Clay_RenderCommandArray App_Create_Layout() {
     Clay_BeginLayout();
@@ -337,74 +323,77 @@ Clay_RenderCommandArray App_Create_Layout() {
             Header_Button(CLAY_STRING("Run_but"), CLAY_STRING("Run"), CLAY_STRING("Run_menu"), run_menu_items, 2);
             Header_Button(CLAY_STRING("Tools_but"), CLAY_STRING("Tools"), CLAY_STRING("Tools_menu"), tools_menu_items, 3);
             Header_Button(CLAY_STRING("Debug_but"), CLAY_STRING("Debug"), CLAY_STRING("Debug_menu"), debug_menu_items, 4);
-            Header_Button(CLAY_STRING("Options_but"), CLAY_STRING("Options"), CLAY_STRING("Options_menu"), options_menu_items, 5);
         };
         CLAY(center) {
             CLAY(emulator_section_decl);
-            CLAY(register_section) {
-                CLAY_TEXT(CLAY_STRING("Registers"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
-                
-                // Update register text buffers with current CPU state
-                for (int i = 0; i < 8; i++) {
-                    int len = sprintf(register_text_buffers[i], "r%d: 0x%04X", i, cpu->r[i]);
-                    register_strings[i] = (Clay_String){
-                        .isStaticallyAllocated = false, 
-                        .length = len, 
-                        .chars = register_text_buffers[i]
-                    };
-                    CLAY_TEXT(register_strings[i], CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_LIGHT }));
-                }
-                
-                // Add PC and flags display
-                static char pc_buffer[32];
-                static char flags_buffer[64];
-                
-                int pc_len = sprintf(pc_buffer, "PC: 0x%04X", cpu->pc);
-                Clay_String pc_string = {.isStaticallyAllocated = false, .length = pc_len, .chars = pc_buffer};
-                CLAY_TEXT(pc_string, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_ORANGE }));
-                
-                int flags_len = sprintf(flags_buffer, "Flags: Z:%d N:%d C:%d V:%d", 
-                                       cpu->flags.z, cpu->flags.n, cpu->flags.c, cpu->flags.v);
-                Clay_String flags_string = {.isStaticallyAllocated = false, .length = flags_len, .chars = flags_buffer};
-                CLAY_TEXT(flags_string, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_BLUE }));
-            };
-            CLAY(assembly_section) {
-                CLAY_TEXT(CLAY_STRING("Assembly"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
-                
-                // Show current instruction and some context, avoiding negative addresses
-                static char inst_buffers[5][80];
-                static Clay_String inst_strings[5];
-                int buffer_index = 0;
-                
-                // Calculate how many previous instructions we can safely show
-                int prev_count = (cpu->pc >= 4) ? 2 : (cpu->pc / 2);
-                int start_offset = -prev_count;
-                
-                for (int i = start_offset; i <= 2; i++) {
-                    uint16_t addr = cpu->pc + (i * 2);
+            if (display_registers) {
+                CLAY(register_section) {
+                    CLAY_TEXT(CLAY_STRING("Registers"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
                     
-                    // Skip if address would be negative
-                    if ((int)cpu->pc + (i * 2) < 0) continue;
+                    // Update register text buffers with current CPU state
+                    for (int i = 0; i < 8; i++) {
+                        int len = sprintf(register_text_buffers[i], "r%d: 0x%04X", i, cpu->r[i]);
+                        register_strings[i] = (Clay_String){
+                            .isStaticallyAllocated = false, 
+                            .length = len, 
+                            .chars = register_text_buffers[i]
+                        };
+                        CLAY_TEXT(register_strings[i], CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_LIGHT }));
+                    }
                     
-                    uint16_t instruction = memory_read_word(cpu->memory, addr);
-                    bool is_current = (i == 0);
+                    // Add PC and flags display
+                    static char pc_buffer[32];
+                    static char flags_buffer[64];
                     
-                    int len = sprintf(inst_buffers[buffer_index], "%s%04X: %s", 
-                                     is_current ? "> " : " ", 
-                                     addr, 
-                                     disassemble_word(instruction));
-                    inst_strings[buffer_index] = (Clay_String){
-                        .isStaticallyAllocated = false, 
-                        .length = len, 
-                        .chars = inst_buffers[buffer_index]
-                    };
+                    int pc_len = sprintf(pc_buffer, "PC: 0x%04X", cpu->pc);
+                    Clay_String pc_string = {.isStaticallyAllocated = false, .length = pc_len, .chars = pc_buffer};
+                    CLAY_TEXT(pc_string, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_ORANGE }));
                     
-                    Clay_Color text_color = is_current ? COLOR_ORANGE : COLOR_LIGHT;
-                    CLAY_TEXT(inst_strings[buffer_index], CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = text_color }));
+                    int flags_len = sprintf(flags_buffer, "Flags: Z:%d N:%d C:%d V:%d", 
+                                        cpu->flags.z, cpu->flags.n, cpu->flags.c, cpu->flags.v);
+                    Clay_String flags_string = {.isStaticallyAllocated = false, .length = flags_len, .chars = flags_buffer};
+                    CLAY_TEXT(flags_string, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_BLUE }));
+                };
+            }
+            if (display_assembly) {
+                CLAY(assembly_section) {
+                    CLAY_TEXT(CLAY_STRING("Assembly"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
                     
-                    buffer_index++;
-                }
-            };
+                    // Show current instruction and some context, avoiding negative addresses
+                    static char inst_buffers[5][80];
+                    static Clay_String inst_strings[5];
+                    int buffer_index = 0;
+                    
+                    // Calculate how many previous instructions we can safely show
+                    int prev_count = (cpu->pc >= 4) ? 2 : (cpu->pc / 2);
+                    int start_offset = -prev_count;
+                    
+                    for (int i = start_offset; i <= 2; i++) {
+                        uint16_t addr = cpu->pc + (i * 2);
+                        
+                        // Skip if address would be negative
+                        if ((int)cpu->pc + (i * 2) < 0) continue;
+                        
+                        uint16_t instruction = memory_read_word(cpu->memory, addr);
+                        bool is_current = (i == 0);
+                        
+                        int len = sprintf(inst_buffers[buffer_index], "%s%04X: %s", 
+                                        is_current ? "> " : " ", 
+                                        addr, 
+                                        disassemble_word(instruction));
+                        inst_strings[buffer_index] = (Clay_String){
+                            .isStaticallyAllocated = false, 
+                            .length = len, 
+                            .chars = inst_buffers[buffer_index]
+                        };
+                        
+                        Clay_Color text_color = is_current ? COLOR_ORANGE : COLOR_LIGHT;
+                        CLAY_TEXT(inst_strings[buffer_index], CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = text_color }));
+                        
+                        buffer_index++;
+                    }
+                };
+            }
         };
     };
     return Clay_EndLayout();

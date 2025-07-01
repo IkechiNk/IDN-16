@@ -159,5 +159,6 @@ void initialize_default_tileset(uint8_t memory[]);
 #define SYSCALL_TIMER_START       0xF321    // Start a timer
 #define SYSCALL_TIMER_QUERY       0xF322    // Query timer status and optionally stop
 #define SYSCALL_SLEEP             0xF323    // Sleep for specified duration
+#define SYSCALL_NUMBER_TO_STRING  0xF324    // Convert number to string in user memory
 
 #endif // IDN16_MEMORY_H

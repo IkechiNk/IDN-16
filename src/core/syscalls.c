@@ -621,3 +621,49 @@ void syscall_sleep(Cpu_t* cpu) {
     cpu->r[1] = 1; // Success
 }
 
+void syscall_number_to_string(Cpu_t* cpu) {
+    uint16_t number = cpu->r[1];        // Number to convert
+    uint16_t dest_addr = cpu->r[2];     // Destination memory address
+    uint16_t max_size = cpu->r[3];      // Maximum buffer size
+    uint16_t base = cpu->r[4];          // Number base (10 for decimal, 16 for hex)
+    
+    // Validate base (only support decimal and hex)
+    if (base != 10 && base != 16) {
+        cpu->r[1] = 0; // Error: invalid base
+        cpu->r[2] = 1; // Error code: invalid parameter
+        return;
+    }
+    
+    // Validate buffer size (minimum 2 for null terminator)
+    if (max_size < 2) {
+        cpu->r[1] = 0; // Error: buffer too small
+        cpu->r[2] = 2; // Error code: buffer too small
+        return;
+    }
+    
+    // Convert number to string
+    char temp_buffer[8]; // Enough for 16-bit number in any base + null terminator
+    int string_length;
+    
+    if (base == 10) {
+        string_length = sprintf(temp_buffer, "%u", number);
+    } else { // base == 16
+        string_length = sprintf(temp_buffer, "%X", number);
+    }
+    
+    // Check if result fits in destination buffer (including null terminator)
+    if (string_length + 1 > max_size) {
+        cpu->r[1] = 0; // Error: result too long
+        cpu->r[2] = 3; // Error code: result too long
+        return;
+    }
+    
+    // Copy string to user memory (without privileged access)
+    for (int i = 0; i <= string_length; i++) { // Include null terminator
+        memory_write_byte(cpu->memory, dest_addr + i, temp_buffer[i], false);
+    }
+    
+    cpu->r[1] = string_length; // Return string length (excluding null terminator)
+    cpu->r[2] = 0; // Success code
+}
+

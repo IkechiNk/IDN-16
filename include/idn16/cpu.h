@@ -1,8 +1,8 @@
 #ifndef IDN16_CPU_H
 #define IDN16_CPU_H
 
-#define CPU_CLOCK_HZ 1000000 // 1MHz clock speed
-#define DISPLAY_REFRESH_HZ 60 // 60hz
+#define CPU_CLOCK_HZ 1000000 // 1 MHz
+#define DISPLAY_REFRESH_HZ 240 // 240 Hz
 #define CYCLES_PER_FRAME (CPU_CLOCK_HZ / DISPLAY_REFRESH_HZ)
 #define MS_PER_FRAME (int)(1000 / DISPLAY_REFRESH_HZ)
 
@@ -138,5 +138,6 @@ void syscall_timer_start(Cpu_t* cpu);
 void syscall_timer_stop(Cpu_t* cpu);
 void syscall_timer_query(Cpu_t* cpu);
 void syscall_sleep(Cpu_t* cpu);
+void syscall_number_to_string(Cpu_t* cpu);
 
 #endif // IDN16_CPU_H

@@ -328,7 +328,7 @@ void execute(shared i, Cpu_t* cpu) {
             dec(i.first, cpu);
             break;
         case LDB:
-            ldh(i.first,i.second,i.third,cpu);
+            ldb(i.first,i.second,i.third,cpu);
             break;
         case STB:
             stb(i.first,i.second,i.third,cpu);
@@ -448,6 +448,9 @@ void handle_system_call(uint16_t address, Cpu_t* cpu) {
             break;
         case SYSCALL_SLEEP:
             syscall_sleep(cpu);
+            break;
+        case SYSCALL_NUMBER_TO_STRING:
+            syscall_number_to_string(cpu);
             break;
         default:
             printf("Unknown system call: 0x%04X\n", address);

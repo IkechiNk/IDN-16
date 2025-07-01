@@ -122,7 +122,7 @@ bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data, bool pr
     MemoryRegion_t region_type = memory_get_region(address);
     const MemoryRegion* region = &memory_regions[region_type];
     if (region->read_only && !privileged) {
-        fprintf(stderr, "Error: Attempt to write to read-only memory. REGION: %s\n", region->name);
+        fprintf(stderr, "Error: Attempt to write byte to read-only memory. REGION: %s\n", region->name);
         exit(1);
     }
     memory[address] = data;
@@ -133,7 +133,7 @@ bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data, bool p
     MemoryRegion_t region_type = memory_get_region(address);
     const MemoryRegion* region = &memory_regions[region_type];
     if (region->read_only && !privileged) {
-        fprintf(stderr, "Error: Attempt to write to read-only memory. REGION: %s\n", region->name);
+        fprintf(stderr, "Error: Attempt to write word to read-only memory. REGION: %s\n", region->name);
         exit(1);
     }
     if (address == MEMORY_SIZE - 1) {

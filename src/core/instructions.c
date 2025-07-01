@@ -291,7 +291,6 @@ void xori(uint16_t rd, uint16_t rs1, uint16_t imm, Cpu_t *cpu) {
 void jmp(uint16_t imm, Cpu_t *cpu) {
     cpu->r[7] = cpu->pc + 2; 
     cpu->pc += (int)sign_extend_11(imm);
-    cpu->flags.z = (cpu->pc == 0);
 }
 void jeq(uint16_t imm, Cpu_t *cpu) {
     if (cpu->flags.z) {
@@ -375,7 +374,7 @@ void lui(uint16_t rd, uint16_t imm, Cpu_t *cpu) {
     cpu->r[rd] = result;
     cpu->pc += 2;
 }
-void ldh(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu) {
+void ldb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu) {
     if (rd == 0) {
         cpu->r[0] = 0;
         cpu->pc += 2;

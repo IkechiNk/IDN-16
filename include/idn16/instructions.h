@@ -74,6 +74,6 @@ void inc(uint16_t rd, Cpu_t *cpu);
 void dec(uint16_t rd, Cpu_t *cpu);
 void lui(uint16_t rd, uint16_t imm, Cpu_t *cpu);
 void stb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu);
-void ldh(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu);
+void ldb(uint16_t rd, uint16_t rs1, uint8_t imm, Cpu_t *cpu);
 
 #endif // IDN16_INSTRUCTIONS_H

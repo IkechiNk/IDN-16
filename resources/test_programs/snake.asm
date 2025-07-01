@@ -6,7 +6,7 @@
 ; =============================================================================
 
 ; Generic constants
-STARTING_SIZE = 1000
+STARTING_SIZE = 0
 
 
 ; Hardware addresses
@@ -17,15 +17,18 @@ SNAKE_HEAD_SPRITE = 0xD4F3
 TILESET_DATA_START = 0xE300
 
 ; Game state (using RAM area)
-SNAKE_X = 0x8000            ; Snake head X position
-SNAKE_Y = 0x8001            ; Snake head Y position
-SNAKE_DIR_ADDR = 0x8002     ; Snake direction (0=right, 1=down, 2=left, 3=up)
-SNAKE_LEN = 0x8003          ; Snake length
-APPLE_X = 0x8005            ; Apple X position
-APPLE_Y = 0x8006            ; Apple Y position
-APPLE_ACTIVE = 0x8007       ; Apple spawn state
-TEMP_X = 0x8008             ; Holder Y for body moving
-TEMP_Y = 0x8009             ; Holder Y for body moving
+SNAKE_X = 0x8000                    ; Snake head X position
+SNAKE_Y = 0x8001                    ; Snake head Y position
+SNAKE_DIR_ADDR = 0x8002             ; Snake direction (0=right, 1=down, 2=left, 3=up)
+SNAKE_LEN = 0x8003                  ; Snake length
+APPLE_X = 0x8005                    ; Apple X position
+APPLE_Y = 0x8006                    ; Apple Y position
+APPLE_ACTIVE = 0x8007               ; Apple spawn state
+TEMP_X = 0x8008                     ; Holder Y for body moving
+TEMP_Y = 0x8009                     ; Holder Y for body moving
+GAME_OVER_TEXT = 0x800A             ; Game over tex tstring location
+SCORE_TEXT = 0x8015                 ; Score text string location
+SCORE_TEXT_NUMBER_START = 0x801C    ; Score number string location
 
 ; Input constants
 INPUT_W = 16                ; Up (W key) - bit 4
@@ -46,7 +49,8 @@ SNAKE_HEAD_INDEX = 1
 
 ; Tile Indicies
 GREEN_HEAD_TILE = 1
-RED_APPLE_TILE = 2
+GREEN_BODY_TILE = 2
+RED_APPLE_TILE = 3
 
 ; Screen size
 SCREEN_WIDTH = 40
@@ -66,6 +70,11 @@ SYSCALL_HIDE_SPRITE	= 0xF316
 SYSCALL_SET_SPRITE_PIXEL = 0xF314
 SYSCALL_SET_SPRITE = 0xF311
 SYSCALL_CHECK_COLLISION	= 0xF319
+SYSCALL_PUT_CHAR = 0xF301
+SYSCALL_PUT_STRING = 0xF302
+SYSCALL_SET_CURSOR = 0xF303
+SYSCALL_NUMBER_TO_STRING = 0xF324
+
 
 ; =============================================================================
 ; MAIN PROGRAM
@@ -77,9 +86,11 @@ start:
     
     ; Initialize game state
     LOAD16 r1, SNAKE_X
-    STB r0, [r1]
+    LDI r2, 20
+    STB r2, [r1]
     LOAD16 r1, SNAKE_Y
-    STB r0, [r1]
+    LDI r2, 15
+    STB r2, [r1]
     LOAD16 r1, SNAKE_DIR_ADDR
     LDI r2, DIR_RIGHT        ; Start moving right
     STB r2, [r1]
@@ -121,6 +132,49 @@ init_graphics:
     LOAD16 r5, SYSCALL_SET_SPRITE
     JSR r5
 
+init_game_over:
+    LOAD16 r2, GAME_OVER_TEXT
+    LDI r1, 'G'
+    STB r1, [r2+0] 
+    LDI r1, 'A'
+    STB r1, [r2+1] 
+    LDI r1, 'M'
+    STB r1, [r2+2] 
+    LDI r1, 'E'
+    STB r1, [r2+3] 
+
+    LDI r1, ' '
+    STB r1, [r2+4] 
+
+    LDI r1, 'O'
+    STB r1, [r2+5] 
+    LDI r1, 'V'
+    STB r1, [r2+6] 
+    LDI r1, 'E'
+    STB r1, [r2+7] 
+    LDI r1, 'R'
+    STB r1, [r2+8]
+    STB r0, [r2+9]
+
+init_score:
+    LOAD16 r2, SCORE_TEXT
+    LDI r1, 'S'
+    STB r1, [r2]
+    LDI r1, 'C'
+    STB r1, [r2+1]
+    LDI r1, 'O'
+    STB r1, [r2+2]
+    LDI r1, 'R'
+    STB r1, [r2+3]
+    LDI r1, 'E'
+    STB r1, [r2+4]
+    LDI r1, ':'
+    STB r1, [r2+5]
+    LDI r1, ' '
+    STB r1, [r2+6]
+    LDI r1, 0
+    STB r1, [r2+7]
+
 LOAD16 r1, spawn_apple
 JSR r1 
 
@@ -129,6 +183,12 @@ main:
     JSR r1
 
     LOAD16 r1, update_sprites
+    JSR r1
+
+    LOAD16 r1, update_score
+    JSR r1
+
+    LOAD16 r1, self_collision_check
     JSR r1
 
     LOAD16 r1, main
@@ -227,7 +287,7 @@ set_timer:
     JSR r2
 
     LOAD16 r2, SYSCALL_TIMER_START
-    LDI r1, 17
+    LDI r1, 20
     JSR r2
     
     JMP func_done
@@ -284,10 +344,26 @@ update_sprites:
     LDB r2, [r1]            ; Snake X
     LOAD16 r1, SNAKE_Y
     LDB r3, [r1]            ; Snake Y
+
+    PUSH r2
+    PUSH r3
+
+    ; Temporary value storage
+    LOAD16 r1, SNAKE_HEAD_SPRITE
+    LDB r2, [r1]    ; Head x
+    LDB r3, [r1+1]  ; Head y
+    LOAD16 r1, TEMP_X
+    STB r2, [r1]
+    LOAD16 r1, TEMP_Y
+    STB r3, [r1]
     
+    POP r3
+    POP r2
+
     ; Update snake head sprite (sprite 0)
     LDI r1, SNAKE_HEAD_INDEX          ; Snake_sprite
-    LDI r4, GREEN_HEAD_TILE           ; Snake head tile
+    LOAD16 r4, SNAKE_HEAD_SPRITE
+    LDB r4, [r4+2]          ; SNAKE head tile
     LOAD16 r5, 0xF311       ; SET_SPRITE syscall
     JSR r5
 
@@ -297,19 +373,13 @@ update_sprites:
 
 move_body:
     PUSH ra
-        
-    LOAD16 r1, SNAKE_HEAD_SPRITE
-    LDB r2, [r1]    ; Head x
-    LDB r3, [r1+1]  ; Head y
-    LOAD16 r1, TEMP_X
-    STB r2, [r1]
-    LOAD16 r1, TEMP_Y
-    STB r3, [r1]
 
+    ; Loop setup
     LOAD16 r1, SNAKE_HEAD_SPRITE ; Sprite pointer
     LOAD16 r5, SNAKE_LEN    ; Counter
     LDW r5, [r5]
-    CMP r5, r0
+    LDI r4, 1
+    CMP r5, r4
     JEQ func_done
 loop:
     ADDI r1, r1, 3
@@ -337,8 +407,10 @@ loop:
     LOAD16 r2, TEMP_Y
     STB r3, [r2]    ; Store prev y in next slot
 
+    ; Loop maintanance
     ADDI r5, r5, -1
-    CMP r5, r0
+    LDI r4, 1
+    CMP r5, r4
     JGT loop
     
     JMP func_done
@@ -401,17 +473,17 @@ check_wall_collision:
 
     ; Check wall collision
     CMP r2, r0
-    JLT func_done
+    JLT game_over
     LDI r5, SCREEN_WIDTH
     ADDI r5, r5, -1
     CMP r2, r5
-    JGT func_done
+    JGT game_over
     CMP r3, r0
-    JLT func_done
+    JLT game_over
     LDI r5, SCREEN_HEIGHT
     ADDI r5, r5, -1
     CMP r3, r5
-    JGT func_done
+    JGT game_over
     
     ; Update snake position
     LOAD16 r1, SNAKE_X
@@ -471,4 +543,62 @@ check_eat:
     JSR r3
     CMP r1, r0
     JNE spawn_apple
+    JMP func_done
+
+self_collision_check:
+    PUSH ra
+    
+    LDI r1, SNAKE_HEAD_INDEX   ; Head index
+    MOV r2, r1                 ; Body counter
+    
+    LOAD16 r4, SNAKE_LEN
+    LDW r4, [r4+0] ; Max counter value
+    
+self_col:
+    CMP r2, r4
+    JEQ func_done
+
+    LDI r1, SNAKE_HEAD_INDEX   ; Head index
+    ADDI r2, r2, 1
+    LOAD16 r3, SYSCALL_CHECK_COLLISION
+    JSR r3
+    CMP r1, r0
+    JEQ self_col
+
+    JMP game_over
+
+game_over:
+    LOAD16 r3, SYSCALL_SET_CURSOR
+    LDI r1, 14
+    LDI r2, 15
+    JSR r3
+
+    LOAD16 r3, SYSCALL_PUT_STRING
+    LOAD16 r1, GAME_OVER_TEXT
+    LOAD16 r2, 10
+    JSR r3
+    JMP game_over
+
+update_score:
+    PUSH ra
+
+    LOAD16 r5, SYSCALL_NUMBER_TO_STRING
+    LOAD16 r1, SNAKE_LEN
+    LDW r1, [r1]
+    ADDI r1, r1, -1                     ; r1 = score
+    LOAD16 r2, SCORE_TEXT_NUMBER_START  ; r2 = write pointer
+    LDI r3, 5                           ; r3 = max_size
+    LDI r4, 10                          ; r4 = base 10
+    JSR r5
+
+    LOAD16 r5, SYSCALL_SET_CURSOR
+    LDI r1, 0
+    LDI r2, 0
+    JSR r5
+
+    LOAD16 r5, SYSCALL_PUT_STRING
+    LOAD16 r1, SCORE_TEXT
+    LDI r2, 10
+    JSR r5
+
     JMP func_done

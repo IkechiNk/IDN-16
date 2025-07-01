@@ -52,7 +52,6 @@ FetchContent_MakeAvailable(SDL_image)
 set_property(DIRECTORY "${SDL_image_SOURCE_DIR}" PROPERTY EXCLUDE_FROM_ALL TRUE)
 
 
-
 # Core source files
 set(CORE_SOURCES
 	src/core/cpu.c

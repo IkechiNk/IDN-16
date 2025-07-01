@@ -338,7 +338,7 @@ void test_LUI(void) {
     TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
 }
 
-void test_LDH_and_STB(void) {
+void test_LDB_and_STB(void) {
     // Set up test data and ensure we're using valid RAM addresses
     cpu->r[1] = 0xAB;  // Data to store (byte)
     cpu->r[2] = RAM_START + 0x100; // Base address in safe RAM area
@@ -348,23 +348,23 @@ void test_LDH_and_STB(void) {
     
     // Load byte back
     cpu->r[3] = 0;
-    ldh(3, 2, 0x05, cpu);
+    ldb(3, 2, 0x05, cpu);
     TEST_ASSERT_EQUAL_UINT16(0xAB, cpu->r[3]);
     
-    // Test flags for ldh
+    // Test flags for ldb
     TEST_ASSERT_FALSE(cpu->flags.z);
     TEST_ASSERT_FALSE(cpu->flags.n);
     TEST_ASSERT_FALSE(cpu->flags.c);
     TEST_ASSERT_FALSE(cpu->flags.v);
     
-    // Edge: ldh to r0 (should not change r0)
-    ldh(0, 2, 0x05, cpu);
+    // Edge: ldb to r0 (should not change r0)
+    ldb(0, 2, 0x05, cpu);
     TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[0]);
     
     // Test zero flag
     cpu->r[4] = 0;     // Ensure we have 0 to store
     stb(4, 2, 0x06, cpu); // Store 0
-    ldh(1, 2, 0x06, cpu);
+    ldb(1, 2, 0x06, cpu);
     TEST_ASSERT_EQUAL_UINT16(0x0000, cpu->r[1]);
     TEST_ASSERT_TRUE(cpu->flags.z);
     
@@ -372,7 +372,7 @@ void test_LDH_and_STB(void) {
     cpu->r[1] = 0xCD;
     stb(1, 2, 0x07, cpu);
     cpu->r[3] = 0;
-    ldh(3, 2, 0x07, cpu);
+    ldb(3, 2, 0x07, cpu);
     TEST_ASSERT_EQUAL_UINT16(0xCD, cpu->r[3]);
 }
 
@@ -403,6 +403,6 @@ int main(void) {
     RUN_TEST(test_HLT_and_NOP);
     RUN_TEST(test_INC_and_DEC);
     RUN_TEST(test_LUI);
-    RUN_TEST(test_LDH_and_STB);
+    RUN_TEST(test_LDB_and_STB);
     return UNITY_END();
 }

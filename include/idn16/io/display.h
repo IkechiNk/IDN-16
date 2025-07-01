@@ -43,8 +43,7 @@ void display_update(display_t *display, SDL_FRect *where);
 /*
  * Text rendering functions
  */
-void render_text_mode(display_t* display);
-void render_char_at_pixel(display_t* display, uint8_t ch, int pixel_x, int pixel_y, uint16_t fg, uint16_t bg);
+void render_text(display_t* display);
 
 /*
  * Sprite rendering functions

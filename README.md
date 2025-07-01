@@ -22,13 +22,15 @@
       - [Video Control Registers (0xD4B0-0xD4CF)](#video-control-registers-0xd4b0-0xd4cf)
     - [System Architecture](#system-architecture)
     - [System Call Functions](#system-call-functions)
-      - [Text/Console Functions](#textconsole-functions)
-      - [Sprite Animation Functions](#sprite-animation-functions)
-      - [Timer Functions](#timer-functions)
+      - [Display & Graphics Functions](#display--graphics-functions)
+      - [Input & Control Functions](#input--control-functions)
+      - [Sprite Management & Animation Functions](#sprite-management--animation-functions)
+      - [Timer & System Functions](#timer--system-functions)
+      - [Math & Utility Functions](#math--utility-functions)
       - [Audio Functions](#audio-functions)
-      - [Input Functions](#input-functions)
-      - [Math Functions](#math-functions)
-      - [Memory/Utility Functions](#memoryutility-functions)
+      - [Extended Input Functions](#extended-input-functions)
+      - [Extended Math Functions](#extended-math-functions)
+      - [Extended Memory/Utility Functions](#extended-memoryutility-functions)
     - [Sprite System (Direct Memory Access)](#sprite-system-direct-memory-access)
     - [CPU Architecture](#cpu-architecture)
       - [Registers](#registers)
@@ -447,7 +449,7 @@ The IDN-16 uses a **dual-mode graphics system**:
 ### System Call Functions
 System calls handle text output, input, audio, math, sprite animation, and utility functions. These are accessed via specific memory addresses in the 0xF300-0xFFFF range. The IDN-16 now includes **35 total system calls** with enhanced sprite animation capabilities for game development.
 
-#### Text/Console Functions
+#### Display & Graphics Functions
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
 | SYSCALL_CLEAR_SCREEN| 0xF300  | - | r1=success(1/0) | Clear entire 40x30 text screen |
@@ -459,64 +461,73 @@ System calls handle text output, input, audio, math, sprite animation, and utili
 | SYSCALL_SCROLL_UP   | 0xF306  | - | - | Scroll text screen up one line |
 | SYSCALL_FILL_AREA   | 0xF307  | r1=x, r2=y, r3=width, r4=height, r5=char | - | Fill rectangular area with character |
 | SYSCALL_SET_TEXT_COLOR | 0xF308 | r1=fg_color, r2=bg_color | - | Set foreground/background color |
-| SYSCALL_GET_INPUT   | 0xF309  | r1=controller | r1=button_state | Get keyboard input |
-| SYSCALL_PLAY_TONE   | 0xF30A  | r1=freq, r2=duration | r1=success(1/0) | Play audio tone |
-| SYSCALL_MULTIPLY    | 0xF30B  | r1=a, r2=b | r1=result_low, r2=result_high | 16-bit multiply operation |
-| SYSCALL_DIVIDE      | 0xF30C  | r1=dividend, r2=divisor | r1=quotient, r2=remainder | 16-bit divide operation |
-| SYSCALL_RANDOM      | 0xF30D  | - | r1=random_number | Generate random number |
-| SYSCALL_MEMCPY      | 0xF30E  | r1=dest, r2=src, r3=length | r1=bytes_copied | Memory copy operation |
+| SYSCALL_SET_PALETTE | 0xF312  | r1=palette_index, r2=color | r1=success(1/0) | Set palette color (RGB565) |
+| SYSCALL_SET_SPRITE_PIXEL | 0xF314 | r1=tile_id, r2=pixel_x, r3=pixel_y, r4=palette_index | r1=success(1/0) | Set individual sprite pixel color |
 | SYSCALL_PRINT_HEX   | 0xF30F  | r1=number | - | Print number in hexadecimal |
 | SYSCALL_PRINT_DEC   | 0xF310  | r1=number | - | Print number in decimal |
-| SYSCALL_SET_SPRITE  | 0xF311  | r1=sprite_id, r2=x, r3=y, r4=tile_id | r1=success(1/0) | Set sprite position and tile |
-| SYSCALL_SET_PALETTE | 0xF312  | r1=palette_index, r2=color | r1=success(1/0) | Set palette color (RGB565) |
-| SYSCALL_MOVE_SPRITE | 0xF313  | r1=sprite_id, r2=new_x, r3=new_y | r1=success(1/0) | Move sprite to new position |
-| SYSCALL_SET_SPRITE_PIXEL | 0xF314 | r1=tile_id, r2=pixel_x, r3=pixel_y, r4=palette_index | r1=success(1/0) | Set individual sprite pixel color |
-| SYSCALL_GET_FRAME_COUNT | 0xF315 | - | r1=frame_count | Get current frame count |
 
-#### Sprite Animation Functions
+#### Input & Control Functions
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_GET_INPUT   | 0xF309  | r1=controller | r1=button_state | Get keyboard input |
+| SYSCALL_SET_RETURN_ADDR | 0xF31C | - | r1=success(1/0) | Set return address register (r7) to next instruction |
+
+#### Sprite Management & Animation Functions
+| Function            | Address | Inputs | Outputs | Description |
+|-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_SET_SPRITE  | 0xF311  | r1=sprite_id, r2=x, r3=y, r4=tile_id | r1=success(1/0) | Set sprite position and tile |
+| SYSCALL_MOVE_SPRITE | 0xF313  | r1=sprite_id, r2=new_x, r3=new_y | r1=success(1/0) | Move sprite to new position |
 | SYSCALL_HIDE_SPRITE | 0xF316  | r1=sprite_id | r1=success(1/0) | Hide sprite by setting tile_id to 0 |
 | SYSCALL_GET_SPRITE_POS | 0xF317 | r1=sprite_id | r1=x, r2=y | Get sprite x,y position |
 | SYSCALL_CLEAR_SPRITE_RANGE | 0xF318 | r1=start_id, r2=end_id | r1=sprites_cleared | Clear sprite range |
 | SYSCALL_CHECK_COLLISION | 0xF319 | r1=sprite1_id, r2=sprite2_id | r1=collision(1/0) | Check 8x8 sprite collision |
 | SYSCALL_SHIFT_SPRITES | 0xF31A | r1=start_id, r2=count, r3=dx, r4=dy | r1=sprites_moved | Move multiple sprites with offset |
 | SYSCALL_COPY_SPRITE | 0xF31B | r1=src_id, r2=dest_id | r1=success(1/0) | Copy sprite properties |
-| SYSCALL_SET_RETURN_ADDR | 0xF31C | - | r1=success(1/0) | Set return address register (r7) to next instruction |
 | SYSCALL_MOVE_SPRITE_RIGHT | 0xF31D | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite right by N tiles |
 | SYSCALL_MOVE_SPRITE_LEFT | 0xF31E | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite left by N tiles |
 | SYSCALL_MOVE_SPRITE_UP | 0xF31F | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite up by N tiles |
 | SYSCALL_MOVE_SPRITE_DOWN | 0xF320 | r1=sprite_id, r2=tiles | r1=success(1/0) | Move sprite down by N tiles |
 
-#### Timer Functions
+#### Timer & System Functions
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_GET_FRAME_COUNT | 0xF315 | - | r1=frame_count | Get current frame count |
 | SYSCALL_TIMER_START | 0xF321 | r1=duration | r1=success(1/0) | Start timer with duration in milliseconds |
 | SYSCALL_TIMER_QUERY | 0xF322 | r1=stop_flag | r1=0 if complete, remaining_ms if not; r2=timer_state (1=stopped, 0=running) | Query timer status, optionally stop timer if r1=1 |
 | SYSCALL_SLEEP | 0xF323 | r1=duration | r1=success(1/0) | Set CPU sleep timer in milliseconds |
 
-#### Audio Functions  
-| Function          | Address | Inputs | Outputs | Description |
-| ----------------- | ------- | ------ | ------- | ----------- |
+#### Math & Utility Functions
+| Function            | Address | Inputs | Outputs | Description |
+|-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_MULTIPLY    | 0xF30B  | r1=a, r2=b | r1=result_low, r2=result_high | 16-bit multiply operation |
+| SYSCALL_DIVIDE      | 0xF30C  | r1=dividend, r2=divisor | r1=quotient, r2=remainder | 16-bit divide operation |
+| SYSCALL_RANDOM      | 0xF30D  | - | r1=random_number | Generate random number |
+| SYSCALL_MEMCPY      | 0xF30E  | r1=dest, r2=src, r3=length | r1=bytes_copied | Memory copy operation |
+| SYSCALL_NUMBER_TO_STRING | 0xF324 | r1=number, r2=dest_addr, r3=max_size, r4=base(10/16) | r1=string_length, r2=error_code(0=success) | Convert number to string in user memory |
+
+#### Audio Functions
+| Function            | Address | Inputs | Outputs | Description |
+|-------------------- | ------- | ------ | ------- | ----------- |
+| SYSCALL_PLAY_TONE   | 0xF30A  | r1=freq, r2=duration | r1=success(1/0) | Play audio tone |
 | SYS_PLAY_TONE     | 0x4400  | r1=freq, r2=duration, r3=channel | r1=success(1/0) | Play tone on audio channel (0-3) |
 | SYS_STOP_CHANNEL  | 0x4402  | r1=channel | r1=success(1/0) | Stop audio on specific channel |
 | SYS_SET_VOLUME    | 0x4404  | r1=channel, r2=volume(0-15) | r1=success(1/0) | Set channel volume |
 | SYS_SET_WAVEFORM  | 0x4406  | r1=channel, r2=waveform(0-3) | r1=success(1/0) | Set waveform (0=square, 1=sine, 2=triangle, 3=noise) |
 
-#### Input Functions
+#### Extended Input Functions
 | Function | Address | Inputs | Outputs | Description |
 |----------|---------|--------|---------|-------------|
 | SYS_GET_KEYS | 0x4500 | r1=controller(0/1) | r1=button_state | Read current controller state |
 | SYS_WAIT_KEY | 0x4502 | - | r1=key_pressed | Wait for any key press |
 | SYS_KEY_PRESSED | 0x4504 | r1=controller, r2=key_bit(0-7) | r1=pressed(1/0) | Check if specific key is pressed |
 
-#### Math Functions
+#### Extended Math Functions
 | Function | Address | Inputs | Outputs | Description |
 |----------|---------|--------|---------|-------------|
 | SYS_MULTIPLY | 0x4600 | r1=multiplicand, r2=multiplier | r1=result_low, r2=result_high | 16-bit multiplication |
 | SYS_ABS | 0x4606 | r1=signed_value | r1=absolute_value | Get absolute value |
 
-#### Memory/Utility Functions
+#### Extended Memory/Utility Functions
 | Function | Address | Inputs | Outputs | Description |
 |----------|---------|--------|---------|-------------|
 | SYS_MEMCPY | 0x4700 | r1=dest, r2=src, r3=length | r1=bytes_copied | Copy memory block |
@@ -680,6 +691,36 @@ check_right:
     
 movement_done:
     ; Continue with other game logic...
+```
+
+**Number to String Conversion Example:**
+```assembly
+; Convert a number to decimal string in user memory
+number_to_string_example:
+    LDI r1, 1234            ; Number to convert
+    LOAD16 r2, 0x8000       ; Destination address in user memory
+    LDI r3, 10              ; Buffer size (10 bytes)
+    LDI r4, 10              ; Base 10 (decimal)
+    LOAD16 r5, 0xF324       ; SYSCALL_NUMBER_TO_STRING
+    JSR r5                  ; r1 = string length, r2 = error code
+    
+    ; Check for success
+    CMP r2, r0              ; Check if r2 = 0 (success)
+    JNE conversion_error    ; Jump if error occurred
+    
+    ; Display the converted string
+    LOAD16 r1, 0x8000       ; String address
+    MOV r2, r1              ; String length (from previous call)
+    LOAD16 r3, 0xF302       ; SYSCALL_PUT_STRING
+    JSR r3                  ; Display the string
+    JMP conversion_done
+    
+conversion_error:
+    ; Handle error (r2 contains error code: 1=invalid base, 2=buffer too small, 3=result too long)
+    ; Display error message...
+    
+conversion_done:
+    ; Continue with program...
 ```
 
 ### Sprite System (Direct Memory Access)

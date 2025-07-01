@@ -1,6 +1,7 @@
 #include "idn16/io/display.h"
 #include "idn16/memory.h"
 #include <string.h>
+#include "font8x8/font8x8_basic.h"
 
 display_t* display_init(int width, int height, int scale, uint8_t memory[], SDL_Renderer *renderer, TTF_Font *font) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -85,11 +86,10 @@ void display_update(display_t* display, SDL_FRect *where) {
     // Clear screen with black background
     clear_screen_buffer(display, 0x0000);
     
-    // Always render text mode for system calls
-    render_text_mode(display);
-    
     // Also render sprites if they exist
     render_sprites(display);
+
+    render_text(display);
 
     // Update texture for rendering
     SDL_UpdateTexture(display->texture, NULL, display->pixels, display->width * sizeof(uint16_t));
@@ -108,42 +108,8 @@ uint16_t rgb_to_rgb565(uint8_t r, uint8_t g, uint8_t b) {
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
-// Draw a single character at specific pixel coordinates
-void render_char_at_pixel(display_t* display, uint8_t ch, int pixel_x, int pixel_y, uint16_t fg, uint16_t bg) {
-    if (!display || !display->font || ch < 32 || ch > 126) return;
 
-    // Render the character to an SDL_Surface using TTF
-    char text[2] = { ch, 0 };
-    SDL_Color fg_color = { (fg >> 11) << 3, ((fg >> 5) & 0x3F) << 2, (fg & 0x1F) << 3, 255 };
-    SDL_Color bg_color = { (bg >> 11) << 3, ((bg >> 5) & 0x3F) << 2, (bg & 0x1F) << 3, 255 };
-
-    SDL_Surface* glyph = TTF_RenderText_Shaded(display->font, text, 1, fg_color, bg_color);
-    if (!glyph) return;
-
-    // Copy glyph pixels to display buffer at specified pixel coordinates (constrain to 8x8)
-    int max_width = (glyph->w > 8) ? 8 : glyph->w;
-    int max_height = (glyph->h > 8) ? 8 : glyph->h;
-    for (int y = 0; y < max_height; y++) {
-        for (int x = 0; x < max_width; x++) {
-            uint32_t pixel = ((uint32_t*)glyph->pixels)[y * glyph->w + x];
-            // Convert ARGB8888 to RGB565
-            uint8_t r = (pixel >> 16) & 0xFF;
-            uint8_t g = (pixel >> 8) & 0xFF;
-            uint8_t b = (pixel) & 0xFF;
-            uint16_t rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-
-            int px = pixel_x + x;
-            int py = pixel_y + y;
-            if (px >= 0 && px < display->width && py >= 0 && py < display->height) {
-                display->pixels[py * display->width + px] = rgb565;
-            }
-        }
-    }
-
-    SDL_DestroySurface(glyph);
-}
-
-void render_text_mode(display_t* display) {
+void render_text(display_t* display) {
     if (!display->font) return;
 
     // Read text colors once per frame for performance
@@ -156,21 +122,43 @@ void render_text_mode(display_t* display) {
         bg_color = 0x0000; // Black
     }
 
-    // Render text grid (40x30 characters)
-    for (int y = 0; y < SCREEN_HEIGHT_TILES; y++) {
-        for (int x = 0; x < SCREEN_WIDTH_TILES; x++) {
-            uint16_t tile_addr = CHAR_BUFFER_START + (y * 40 + x);
-            uint8_t ch = memory_read_byte(display->memory, tile_addr);
+
+    // Render text grid (40x30 characters) - read from character buffer
+    for (int tile_y = 0; tile_y < SCREEN_HEIGHT_TILES; tile_y++) {
+        for (int tile_x = 0; tile_x < SCREEN_WIDTH_TILES; tile_x++) {
+            // Read character from buffer at 0xD000-0xD4AF
+            uint16_t buffer_addr = CHAR_BUFFER_START + (tile_y * SCREEN_WIDTH_TILES + tile_x);
+            uint8_t ch = memory_read_byte(display->memory, buffer_addr);
             
-            // Skip rendering empty/invisible characters for performance
-            if (ch >= 32 && ch <= 126) {
-                int pixel_x = x * display->char_width;
-                int pixel_y = y * display->char_height;
-                render_char_at_pixel(display, ch, pixel_x, pixel_y, fg_color, bg_color);
+            // Skip rendering empty/invisible characters
+            if (ch < 32 || ch > 126) continue;
+
+            // Get 8x8 bitmap glyph from font
+            const uint8_t* glyph = font8x8_basic[ch];
+            
+            // Position character at tile location
+            int pixel_x = tile_x * 8;
+            int pixel_y = tile_y * 8;
+            
+            // Render 8x8 bitmap directly to pixel buffer
+            for (int row = 0; row < 8; row++) {
+                uint8_t bits = glyph[row];
+                for (int col = 0; col < 8; col++) {
+                    // Check if bit is set (foreground) or clear (background)
+                    uint16_t color = (bits & (1 << col)) ? fg_color : bg_color;
+                    
+                    int px = pixel_x + col;
+                    int py = pixel_y + row;
+                    if (px >= 0 && px < display->width && py >= 0 && py < display->height) {
+                        display->pixels[py * display->width + px] = color;
+                    }
+                }
             }
         }
     }
 }
+
+
 
 // Sprite rendering functions
 void render_sprites(display_t* display) {
