@@ -45,8 +45,6 @@ void memory_init(uint8_t memory[]) {
     
     // Initialize stack pointer to top of RAM
     memory_write_word(memory, SYSTEM_CTRL_START + 10, RAM_END, true);
-    
-    printf("IDN-16 System initialized (simplified - no system ROM)\n");
 }
 
 void initialize_video_memory(uint8_t memory[]) {

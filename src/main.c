@@ -9,6 +9,7 @@
 #include "idn16/io/keyboard.h"
 #include "idn16/cpu.h"
 #include "idn16/dasm.h"
+#include "idn16/asmblr.h"
 #include "../lib/sfd/sfd.h"
 
 #define CLAY_IMPLEMENTATION
@@ -42,7 +43,6 @@ const float ScreenWidth = 1408.0f;
 const float ScreenHeight = 792.0f;
 void *clay_mem;
 
-bool debug_mode = false;
 bool display_registers = false;
 bool display_assembly = false;
 bool cycling = false;
@@ -112,7 +112,6 @@ void file_close_rom() {
     printf("Closing ROM...\n"); 
 }
 void file_open_rom() { 
-    file_close_rom();
     printf("Opening ROM...\n");
     sfd_Options opt = {
         .title = "Open ROM",
@@ -121,6 +120,7 @@ void file_open_rom() {
     };
     const char *filename = sfd_open_dialog(&opt);
     if (filename) {
+        file_close_rom();
         printf("Got file: '%s'\n", filename);
         loaded_rom_file = fopen(filename, "r");
         load_user_rom(cpu->memory, loaded_rom_file);
@@ -130,10 +130,8 @@ void file_open_rom() {
 }
 void file_exit() { cpu->running = false; }
 
-void view_debug_mode() { debug_mode = !debug_mode; printf("Debug mode: %s\n", debug_mode ? "ON" : "OFF"); }
-void view_memory_viewer() { if (debug_mode) memory_dump(cpu->memory, 0x0000, 64, 16); }
+void view_memory_viewer() { memory_dump(cpu->memory, 0x0000, 64, 16); }
 void view_cpu_registers() { display_registers = !display_registers; }
-void view_display_settings() { printf("Display Settings\n"); }
 void view_assembly_listing() { display_assembly = !display_assembly; }
 
 void run_start_resume() { if (loaded_rom_file) cycling = true; }
@@ -141,7 +139,7 @@ void run_pause() { cycling = false;}
 void run_step_instruction() { 
     if (loaded_rom_file) {
         cycling = false; 
-        cpu_cycle(cpu, debug_mode);
+        cpu_cycle(cpu);
     }
 }
 void run_reset_cpu() { 
@@ -165,29 +163,42 @@ void run_reset_cpu() {
 
 }
 
-void tools_assembler() { printf("Assembler\n"); }
+void tools_assembler() { 
+    sfd_Options opt_in = {
+        .title = "Select assembly file to assemble",
+        .filter_name = "IDN-16 ASMs",
+        .filter = "*.asm|*.idn16"
+    };
+    const char *input = sfd_open_dialog(&opt_in);
+    if (!input) {
+        printf("No input selected\n");
+        return;
+    }
+
+    sfd_Options opt_out = {
+        .title = "Choose where to save assembled rom",
+        .filter_name = "IDN-16 ROMSs",
+        .filter = "*.rom|*.bin"
+    };
+    const char *output = sfd_save_dialog(&opt_out);
+    if (!output) {
+        printf("No output selected\n");
+        return;
+    }
+    
+    internal_assemble(input, output);
+ }
 void tools_disassembler() { printf("Disassembler\n"); }
 void tools_memory_editor() { printf("Memory Editor\n"); }
-
-void debug_breakpoints() { printf("Breakpoints\n"); }
-void debug_call_stack() { printf("Call Stack\n"); }
-void debug_memory_dump() { printf("Memory Dump\n"); }
-
-void options_emulation_speed() { printf("Emulation Speed\n"); }
-void options_audio_settings() { printf("Audio Settings\n"); }
-void options_graphics_settings() { printf("Graphics Settings\n"); }
-void options_input_configuration() { printf("Input Configuration\n"); }
-void options_preferences() { printf("Preferences\n"); }
 
 typedef void (*MenuAction)(void);
 
 MenuAction file_actions[] = { file_open_rom, file_close_rom, file_exit };
-MenuAction view_actions[] = { view_debug_mode, view_memory_viewer, view_cpu_registers, view_assembly_listing };
+MenuAction view_actions[] = { view_memory_viewer, view_cpu_registers, view_assembly_listing };
 MenuAction run_actions[] = { run_start_resume, run_pause, run_step_instruction, run_reset_cpu };
 MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_editor };
-MenuAction debug_actions[] = { debug_breakpoints, debug_call_stack, debug_memory_dump };
 
-MenuAction* menu_action_arrays[] = { file_actions, view_actions, run_actions, tools_actions, debug_actions };
+MenuAction* menu_action_arrays[] = { file_actions, view_actions, run_actions, tools_actions };
 
 void Header_Menu_Item_Click(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
     if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
@@ -269,10 +280,8 @@ Clay_String *file_menu_items[] = {
 };
 // View menu items
 Clay_String *view_menu_items[] = {
-    &CLAY_STRING("Debug Mode (F1)"),
-    &CLAY_STRING("Memory Viewer (F4)"),
+    &CLAY_STRING("Memory Viewer (F1)"),
     &CLAY_STRING("CPU Registers"),
-    &CLAY_STRING("Display Settings"),
     &CLAY_STRING("Assembly Listing"),
     NULL
 };
@@ -289,15 +298,7 @@ Clay_String *tools_menu_items[] = {
     &CLAY_STRING("Assembler"),
     &CLAY_STRING("Disassembler"),
     &CLAY_STRING("Memory Editor"),
-    &CLAY_STRING("ROM Manager"),
-    NULL
-};
-// Debug menu items
-Clay_String *debug_menu_items[] = {
-    &CLAY_STRING("Breakpoints"),
-    &CLAY_STRING("Call Stack"),
     &CLAY_STRING("Memory Dump"),
-    &CLAY_STRING("I/O Monitor"),
     NULL
 };
 
@@ -322,7 +323,6 @@ Clay_RenderCommandArray App_Create_Layout() {
             Header_Button(CLAY_STRING("View_but"), CLAY_STRING("View"), CLAY_STRING("View_menu"), view_menu_items, 1);
             Header_Button(CLAY_STRING("Run_but"), CLAY_STRING("Run"), CLAY_STRING("Run_menu"), run_menu_items, 2);
             Header_Button(CLAY_STRING("Tools_but"), CLAY_STRING("Tools"), CLAY_STRING("Tools_menu"), tools_menu_items, 3);
-            Header_Button(CLAY_STRING("Debug_but"), CLAY_STRING("Debug"), CLAY_STRING("Debug_menu"), debug_menu_items, 4);
         };
         CLAY(center) {
             CLAY(emulator_section_decl);
@@ -427,7 +427,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to allocate memory for the font array: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    TTF_Font *font = TTF_OpenFont("resources/fonts/PixelifySans.ttf", 24);
+    TTF_Font *font = TTF_OpenFont("../resources/fonts/PixelifySans.ttf", 24);
     if (!font) {
         SDL_Log("Failed to load font: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
@@ -462,7 +462,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     renderer_data->fonts = fonts;
     renderer_data->renderer = renderer;
 
-    printf("Debug mode: %s\n", debug_mode ? "ON" : "OFF");
     return SDL_APP_CONTINUE;
 }
 
@@ -480,9 +479,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             if (event->key.key == SDLK_ESCAPE) {
                 cpu->running = false;
             } else if (event->key.key == SDLK_F1) {
-                debug_mode = !debug_mode;
-                printf("Debug mode: %s\n", debug_mode ? "ON" : "OFF");
-            } else if (event->key.key == SDLK_F4 && debug_mode) {
                 memory_dump(cpu->memory, 0x0000, 64, 16);
                 printf("Dumping memory\n");
             } else if (event->key.key == SDLK_SPACE) {
@@ -528,7 +524,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 
     for (int i = 0; (i < CYCLES_PER_FRAME) && cycling && cpu->running && cpu->sleep_timer == 0; i++) {
-        cpu_cycle(cpu, debug_mode);
+        cpu_cycle(cpu);
 
     }
     if (cpu->sleep_timer > 0 && sleep_from == 0) {

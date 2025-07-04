@@ -38,14 +38,13 @@ void cpu_destroy(Cpu_t* cpu) {
     }
 }
 
-void cpu_cycle(Cpu_t* cpu, bool debug) {
+void cpu_cycle(Cpu_t* cpu) {
     if (cpu->pc > RAM_END) {
         fprintf(stderr, "Error: Program counter out of bounds: 0x%4X\n", cpu->pc);
         cpu->running = false;
         return;
     }
     uint16_t inst = fetch(cpu);
-    if (debug) printf("%u: %s\n", cpu->pc / 2, disassemble_word(inst));
     execute(decode(inst), cpu);
 }
 

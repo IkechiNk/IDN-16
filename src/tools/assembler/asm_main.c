@@ -3,6 +3,7 @@
 
 #include "idn16/symbol_table.h"
 #include "idn16/codegen.h"
+#include "idn16/asmblr.h"
 
 // Flex/Bison externs
 extern FILE* yyin;
@@ -41,14 +42,9 @@ void add_newline_to_file(const char* filename) {
     return;
 }
 
-
-int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s input.asm output.bin\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    add_newline_to_file(argv[1]);
-    yyin = fopen(argv[1], "rw");
+int internal_assemble(const char* filein, const char* fileout) {
+    add_newline_to_file(filein);
+    yyin = fopen(filein, "rw");
     if (!yyin) {
         perror("fopen input");
         return EXIT_FAILURE;
@@ -61,10 +57,12 @@ int main(int argc, char* argv[]) {
     fclose(yyin);
 
     // Write out .bin with resolved labels
-    finalize_output(argv[2]);
+    finalize_output(fileout);
 
     // Clean up label table
     free_symbols();
-    printf("File assembled -> %s\n", argv[2]);
+    printf("File assembled -> %s\n", fileout);
     return EXIT_SUCCESS;
 }
+
+

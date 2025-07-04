@@ -73,7 +73,7 @@ void cpu_destroy(Cpu_t* cpu);
 /*
  * Runs a full fetch, decode, execute cycle on the cpu.
  */
-void cpu_cycle(Cpu_t* cpu, bool debug);
+void cpu_cycle(Cpu_t* cpu);
 
 /*
  * Returns the current instruction according to the

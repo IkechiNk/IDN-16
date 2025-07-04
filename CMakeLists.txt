@@ -52,44 +52,6 @@ FetchContent_MakeAvailable(SDL_image)
 set_property(DIRECTORY "${SDL_image_SOURCE_DIR}" PROPERTY EXCLUDE_FROM_ALL TRUE)
 
 
-# Core source files
-set(CORE_SOURCES
-	src/core/cpu.c
-	src/core/memory.c
-	src/core/instructions.c
-	src/core/syscalls.c
-	src/core/io/display.c
-	src/core/io/keyboard.c
-	src/tools/disassembler/dasm.c
-)
-
-# SFD source files
-set(SFD_SOURCES
-	lib/sfd/sfd.c
-)
-
-# === MAIN EMULATOR ===
-set(EMULATOR_SOURCES 
-	src/main.c
-	${CORE_SOURCES}
-	${SFD_SOURCES}
-)
-
-add_executable(${PROJECT_NAME} ${EMULATOR_SOURCES})
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-	include
-	lib/clay
-	lib/sfd
-)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-	SDL3::SDL3
-	SDL3_ttf::SDL3_ttf
-	SDL3_image::SDL3_image
-)
-
-# === ASSEMBLER ===
 # Generate parser and lexer files
 set(ASM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/assembler)
 set(PARSER_OUTPUT ${ASM_DIR}/parser.tab.c)
@@ -112,18 +74,47 @@ add_custom_command(
 	COMMENT "Generating lexer with Flex"
 )
 
-set(ASSEMBLER_SOURCES
+# Core source files
+set(CORE_SOURCES
+	src/core/cpu.c
+	src/core/memory.c
+	src/core/instructions.c
+	src/core/syscalls.c
+	src/core/io/display.c
+	src/core/io/keyboard.c
+	src/tools/disassembler/dasm.c
+)
+
+# SFD source files
+set(SFD_SOURCES
+	lib/sfd/sfd.c
+)
+
+# === MAIN EMULATOR ===
+set(EMULATOR_SOURCES
 	${LEXER_OUTPUT}
 	${PARSER_OUTPUT}
 	src/tools/assembler/asm_main.c
 	src/tools/assembler/codegen.c
 	src/tools/assembler/symbol_table.c
+	src/main.c
+	${CORE_SOURCES}
+	${SFD_SOURCES}
 )
 
-add_executable(idn16-asm ${ASSEMBLER_SOURCES})
+add_executable(${PROJECT_NAME} ${EMULATOR_SOURCES})
 
-target_include_directories(idn16-asm PRIVATE include)
-target_link_libraries(idn16-asm PRIVATE ${FLEX_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PRIVATE
+	include
+	lib/clay
+	lib/sfd
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${FLEX_LIBRARIES}
+	SDL3::SDL3
+	SDL3_ttf::SDL3_ttf
+	SDL3_image::SDL3_image
+)
 
 # === DISASSEMBLER ===
 set(DISASSEMBLER_SOURCES
