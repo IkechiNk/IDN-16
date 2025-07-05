@@ -22,11 +22,11 @@
       - [Video Control Registers (0xD4B0-0xD4CF)](#video-control-registers-0xd4b0-0xd4cf)
     - [System Architecture](#system-architecture)
     - [System Call Functions](#system-call-functions)
-      - [Display & Graphics Functions](#display--graphics-functions)
-      - [Input & Control Functions](#input--control-functions)
-      - [Sprite Management & Animation Functions](#sprite-management--animation-functions)
-      - [Timer & System Functions](#timer--system-functions)
-      - [Math & Utility Functions](#math--utility-functions)
+      - [Display \& Graphics Functions](#display--graphics-functions)
+      - [Input \& Control Functions](#input--control-functions)
+      - [Sprite Management \& Animation Functions](#sprite-management--animation-functions)
+      - [Timer \& System Functions](#timer--system-functions)
+      - [Math \& Utility Functions](#math--utility-functions)
       - [Audio Functions](#audio-functions)
       - [Extended Input Functions](#extended-input-functions)
       - [Extended Math Functions](#extended-math-functions)
@@ -768,20 +768,6 @@ LDI r2, 80                     ; Y position
 STB r2, [r1+1]                 ; Write Y coordinate
 LDI r2, 1                      ; Tile ID 1 (Tile_ID 0 = disabled)
 STB r2, [r1+2]                 ; Write tile ID
-```
-
-**Audio Example:**
-```assembly
-; Play a tone
-LDI r1, 440             ; 440 Hz (A note)
-LDI r2, 1000            ; Duration (implementation defined)
-LDI r3, 0               ; Channel 0
-JSR SYS_PLAY_TONE       ; r1 = success
-
-; Set volume
-LDI r1, 0               ; Channel 0
-LDI r2, 8               ; Volume level (0-15)
-JSR SYS_SET_VOLUME      ; r1 = success
 ```
 
 **Input Handling:**

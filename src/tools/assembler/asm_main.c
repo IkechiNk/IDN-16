@@ -13,7 +13,7 @@ int yyparse(void);
 void add_newline_to_file(const char* filename) {
     FILE *f = fopen(filename, "rb+");
     if (!f) {
-        fprintf(stderr, "Error: Unable to open the file");
+        fprintf(stderr, "Error: Unable to open the file \"%s\" to add a new line\n", filename);
     }
 
     fseek(f, 0, SEEK_END);

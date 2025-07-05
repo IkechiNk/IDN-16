@@ -194,3 +194,62 @@ char* disassemble_word(uint16_t word) {
     pc += 2;
     return result;
 }
+
+int internal_disassemble(const char* filein, const char* fileout) {
+    // Open binary file
+    FILE *file = fopen(filein, "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    // Determine file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    if (file_size > MAX_BYTES) {
+        fprintf(stderr, "File too large: %ld bytes (max: %d bytes)\n", file_size, MAX_BYTES);
+        fclose(file);
+        return 1;
+    }
+
+    // Read file into buffer
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, file_size, file) != (size_t)file_size) {
+        perror("File read error");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    // Open output file
+    FILE *output_file = fopen(fileout, "w");
+    if (!output_file) {
+        perror("Error opening output file");
+        free(buffer);
+        return 1;
+        }
+
+    // Disassemble each 16-bit word
+    for (long i = 0; i < file_size; i += 2) {
+        if (i + 1 < file_size) {
+            uint16_t word = read_word(buffer, i);
+            fprintf(output_file, "%s", disassemble_word(word));
+        } else {
+            fprintf(output_file, "Incomplete word found at %d: %02X\n", (int)i, buffer[i]);
+        }
+    }
+
+    fclose(output_file);
+    free(buffer);
+    return 0;
+}

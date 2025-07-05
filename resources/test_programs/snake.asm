@@ -287,7 +287,7 @@ set_timer:
     JSR r2
 
     LOAD16 r2, SYSCALL_TIMER_START
-    LDI r1, 20
+    LDI r1, 17
     JSR r2
     
     JMP func_done

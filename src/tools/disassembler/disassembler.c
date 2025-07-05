@@ -3,7 +3,6 @@
 #include <string.h>
 #include "idn16/dasm.h"
 
-#define MAX_BYTES 65536  // Maximum file size (64KB)
 
 int main(int argc, char *argv[]) {
     if (argc > 3 || argc < 2) {

@@ -169,34 +169,70 @@ void tools_assembler() {
         .filter_name = "IDN-16 ASMs",
         .filter = "*.asm|*.idn16"
     };
-    const char *input = sfd_open_dialog(&opt_in);
-    if (!input) {
+    const char *input_pre_copy = sfd_open_dialog(&opt_in);
+    if (!input_pre_copy) {
         printf("No input selected\n");
         return;
     }
 
+    // Make a copy of input before calling sfd_save_dialog
+    char *input = malloc(strlen(input_pre_copy) + 1);
+    strcpy(input, input_pre_copy);
+
     sfd_Options opt_out = {
         .title = "Choose where to save assembled rom",
-        .filter_name = "IDN-16 ROMSs",
+        .filter_name = "IDN-16 ROMs",
         .filter = "*.rom|*.bin"
     };
     const char *output = sfd_save_dialog(&opt_out);
     if (!output) {
         printf("No output selected\n");
+        free(input);
         return;
     }
     
     internal_assemble(input, output);
+    free(input);
  }
-void tools_disassembler() { printf("Disassembler\n"); }
-void tools_memory_editor() { printf("Memory Editor\n"); }
+void tools_disassembler() {
+    sfd_Options opt_in = {
+        .title = "Select rom file to disassemble",
+        .filter_name = "IDN-16 ROMs",
+        .filter = "*.rom|*.bin"
+    };
+    const char *input_pre_copy = sfd_open_dialog(&opt_in);
+    if (!input_pre_copy) {
+        printf("No input selected\n");
+        return;
+    }
+
+    // Make a copy of input before calling sfd_save_dialog
+    char *input = malloc(strlen(input_pre_copy) + 1);
+    strcpy(input, input_pre_copy);
+
+    sfd_Options opt_out = {
+        .title = "Select where to save disassembled file",
+        .filter_name = "File",
+        .filter = "*.*"
+    };
+    const char *output = sfd_save_dialog(&opt_out);
+    if (!output) {
+        printf("No output selected\n");
+        free(input);
+        return;
+    }
+    
+    internal_disassemble(input, output);
+    free(input);
+ }
+void tools_memory_dump() { printf("Memory Editor\n"); }
 
 typedef void (*MenuAction)(void);
 
 MenuAction file_actions[] = { file_open_rom, file_close_rom, file_exit };
 MenuAction view_actions[] = { view_memory_viewer, view_cpu_registers, view_assembly_listing };
 MenuAction run_actions[] = { run_start_resume, run_pause, run_step_instruction, run_reset_cpu };
-MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_editor };
+MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_dump };
 
 MenuAction* menu_action_arrays[] = { file_actions, view_actions, run_actions, tools_actions };
 
@@ -297,7 +333,6 @@ Clay_String *run_menu_items[] = {
 Clay_String *tools_menu_items[] = {
     &CLAY_STRING("Assembler"),
     &CLAY_STRING("Disassembler"),
-    &CLAY_STRING("Memory Editor"),
     &CLAY_STRING("Memory Dump"),
     NULL
 };
