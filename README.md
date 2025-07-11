@@ -670,7 +670,7 @@ All instructions are 16 bits wide:
 #### IMM-Format Instructions
 
 | Opcode  | Assembly Syntax                       | Usage                               | Immediate Size & Range | Binary note  |
-| ------- | ------------------------------------- | ----------------------------------- | ---------------------- |
+| ------- | ------------------------------------- | ----------------------------------- | ---------------------- | --- |
 | 01000   | LDI rd, imm                           | Load immediate (sign extends)       | 8 bits: -128 to +255   | The remaining 8 bits are used for the immediate |
 | 01001   | LDW rd, [rs1+imm]                     | Load word from memory               | 5 bits: -16 to +31     |
 | 01010   | STW rd, [rs1+imm]                     | Store word to memory                | 5 bits: -16 to +31     |
@@ -690,7 +690,7 @@ All instructions are 16 bits wide:
 #### JB-Format Instructions
 
 | Opcode  | Assembly Syntax                       | Usage                               | Binary note  |
-| ------- | ------------------------------------- | ------------------------------------|       |
+| ------- | ------------------------------------- | ------------------------------------| ----- |
 | 10000   | JMP offset                            | Unconditional jump                  |       |
 | 10001   | JEQ offset                            | Jump if equal                       |       |
 | 10010   | JNE offset                            | Jump if not equal                   |       |
@@ -702,7 +702,7 @@ All instructions are 16 bits wide:
 #### SP-Format (and extra) Instructions
 
 | Opcode  | Assembly Syntax                       | Usage                               | Binary Note |
-| ------- | ------------------------------------- | ------------------------------------|
+| ------- | ------------------------------------- | ------------------------------------| ----------- |
 | 11000   | HLT                                   | Halt processor                      |
 | 11001   | NOP count                             | Insert 'count' NOP instructions     |
 | 11010   | INC rd                                | Increment register                  |

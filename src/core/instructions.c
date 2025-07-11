@@ -320,9 +320,9 @@ void jlt(uint16_t imm, Cpu_t *cpu) {
         cpu->pc += 2;
     }
 }
-void jsr(uint16_t rs1, Cpu_t *cpu) {
-    // JSR uses register for absolute addressing - rs1 contains the target address
-    uint16_t target_address = cpu->r[rs1];
+void jsr(uint16_t rd, Cpu_t *cpu) {
+    // JSR uses register for absolute addressing - rd contains the target address
+    uint16_t target_address = cpu->r[rd];
     
     // Check if target is in system call range
     if (target_address >= SYSCALL_BASE && target_address <= SYSCALL_END) {

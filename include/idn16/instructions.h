@@ -65,7 +65,7 @@ void jeq(uint16_t imm, Cpu_t *cpu);
 void jne(uint16_t imm, Cpu_t *cpu);
 void jgt(uint16_t imm, Cpu_t *cpu);
 void jlt(uint16_t imm, Cpu_t *cpu);
-void jsr(uint16_t rs1, Cpu_t *cpu);
+void jsr(uint16_t rd, Cpu_t *cpu);
 void ret(Cpu_t *cpu);
 
 void hlt(Cpu_t *cpu);

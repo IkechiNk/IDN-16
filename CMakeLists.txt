@@ -54,9 +54,10 @@ set_property(DIRECTORY "${SDL_image_SOURCE_DIR}" PROPERTY EXCLUDE_FROM_ALL TRUE)
 
 # Generate parser and lexer files
 set(ASM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/assembler)
-set(PARSER_OUTPUT ${ASM_DIR}/parser.tab.c)
-set(PARSER_HEADER ${ASM_DIR}/parser.tab.h)
-set(LEXER_OUTPUT ${ASM_DIR}/lex.yy.c)
+set(ASM_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(PARSER_OUTPUT ${ASM_BUILD_DIR}/parser.tab.c)
+set(PARSER_HEADER ${ASM_BUILD_DIR}/parser.tab.h)
+set(LEXER_OUTPUT ${ASM_BUILD_DIR}/lex.yy.c)
 
 # Bison for parser
 add_custom_command(

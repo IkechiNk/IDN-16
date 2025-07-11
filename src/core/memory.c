@@ -5,7 +5,7 @@
 static const MemoryRegion memory_regions[REGION_COUNT] = {
     {USER_ROM_START, USER_ROM_END, true, "User ROM"},
     {RAM_START, RAM_END, false, "RAM"},
-    {VIDEO_RAM_START, VIDEO_RAM_END, true, "Video Memory"},
+    {VIDEO_RAM_START, VIDEO_RAM_END, false, "Video Memory"},
     {AUDIO_REG_START, AUDIO_REG_END, true, "Audio Registers"},
     {INPUT_REG_START, INPUT_REG_END, true, "Input Registers"},
     {SYSTEM_CTRL_START, SYSTEM_CTRL_END, false, "System Control"},

@@ -106,11 +106,59 @@ init_graphics:
     LDI r4, 10          ; Green palette index
     LOAD16 r5, 0xF314   ; SYSCALL_SET_TILE_PIXEL_COLOR
     JSR r5
+    
+    LDI r2, 1           ; X
+    LDI r3, 3           ; Y
+    LDI r4, 0           ; black palette index
+    JSR r5
+    LDI r2, 1           ; X
+    LDI r3, 4           ; Y
+    LDI r4, 0           ; black palette index
+    JSR r5
+    LDI r2, 6           ; X
+    LDI r3, 3           ; Y
+    LDI r4, 0           ; black palette index
+    JSR r5
+    LDI r2, 5           ; X
+    LDI r3, 4           ; Y
+    LDI r4, 0           ; black palette index
+    JSR r5
+    LDI r2, 2           ; X
+    LDI r3, 3           ; Y
+    LDI r4, 10          ; Green palette index
+    JSR r5
+    LDI r2, 3           ; X
+    LDI r3, 4           ; Y
+    LDI r4, 10          ; Green palette index
+    JSR r5
+    LDI r2, 7           ; X
+    LDI r3, 3           ; Y
+    LDI r4, 10          ; Green palette index
+    JSR r5
+    LDI r2, 7           ; X
+    LDI r3, 4           ; Y
+    LDI r4, 10          ; Green palette index
+    JSR r5
 
     LDI r1, SNAKE_HEAD_INDEX
     LDI r2, 0
     LDI r3, 0
     LDI r4, GREEN_HEAD_TILE
+    LOAD16 r5, SYSCALL_SET_SPRITE
+    JSR r5
+
+    ; Create snake body tile (tile 2) - green square
+    LDI r1, GREEN_BODY_TILE
+    LDI r2, 0           ; X
+    LDI r3, 0           ; Y
+    LDI r4, 10          ; Green palette index
+    LOAD16 r5, 0xF314   ; SYSCALL_SET_TILE_PIXEL_COLOR
+    JSR r5
+
+    LDI r1, SNAKE_HEAD_INDEX
+    LDI r2, 0
+    LDI r3, 0
+    LDI r4, GREEN_BODY_TILE
     LOAD16 r5, SYSCALL_SET_SPRITE
     JSR r5
 
@@ -359,7 +407,7 @@ update_sprites:
 
     ; Update snake head sprite (sprite 0)
     LDI r1, SNAKE_HEAD_INDEX          ; Snake_sprite
-    LDI r4, SNAKE_HEAD_INDEX
+    LDI r4, GREEN_HEAD_TILE
     LOAD16 r5, 0xF311       ; SET_SPRITE syscall
     JSR r5
 
@@ -397,7 +445,7 @@ loop:
 
     STB r2, [r1+1]  ; Store next y in cur slot
 
-    LDI r2, GREEN_HEAD_TILE  ; Change later to body tile
+    LDI r2, GREEN_BODY_TILE  ; Change later to body tile
     STB r2, [r1+2]  ; Active body sprite with tile
 
     LOAD16 r2, TEMP_Y
@@ -580,6 +628,7 @@ update_score:
 
     LOAD16 r5, SYSCALL_NUMBER_TO_STRING
     LOAD16 r1, SNAKE_LEN
+    
     LDW r1, [r1]
     ADDI r1, r1, -1                     ; r1 = score
     LOAD16 r2, SCORE_TEXT_NUMBER_START  ; r2 = write pointer

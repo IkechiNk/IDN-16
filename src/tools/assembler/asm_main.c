@@ -8,10 +8,11 @@
 // Flex/Bison externs
 extern FILE* yyin;
 extern int yylineno;
+extern int pc;
+extern char current_token[256];
 int yyparse(void);
 int yylex_destroy(void);
 void yyrestart(FILE *input_file);
-
 
 void add_newline_to_file(const char* filename) {
     FILE *f = fopen(filename, "rb+");
@@ -51,7 +52,7 @@ int internal_assemble(const char* filein, const char* fileout) {
     reset_lexer();
     
     add_newline_to_file(filein);
-    yyin = fopen(filein, "rw");
+    yyin = fopen(filein, "r");
     if (!yyin) {
         perror("fopen input");
         return EXIT_FAILURE;
@@ -65,15 +66,20 @@ int internal_assemble(const char* filein, const char* fileout) {
     if (yyparse() != 0) {
         fprintf(stderr, "Assembly failed due to parse errors\n");
         fclose(yyin);
+        yylex_destroy();
         return EXIT_FAILURE;
     }
     fclose(yyin);
+    
+    // Clean up lexer
+    yylex_destroy();
 
     // Write out .bin with resolved labels
     finalize_output(fileout);
 
     // Clean up label table
     free_symbols();
+    
     printf("File assembled -> %s\n", fileout);
     return EXIT_SUCCESS;
 }
