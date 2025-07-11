@@ -28,9 +28,6 @@
       - [Timer \& System Functions](#timer--system-functions)
       - [Math \& Utility Functions](#math--utility-functions)
       - [Audio Functions](#audio-functions)
-      - [Extended Input Functions](#extended-input-functions)
-      - [Extended Math Functions](#extended-math-functions)
-      - [Extended Memory/Utility Functions](#extended-memoryutility-functions)
     - [Sprite System (Direct Memory Access)](#sprite-system-direct-memory-access)
     - [CPU Architecture](#cpu-architecture)
       - [Registers](#registers)
@@ -56,6 +53,8 @@
 
 `IDN-16` is a 16-bit, simulated console featuring a custom CPU architecture, memory-mapped I/O, and a RISC-V inspired custom instruction set. This serves as a way for me to solidify what I learned about low-level computer architecture, emulation techniques, and graphics programming, while creating something that I find fun and creatively satisfying.
 
+![IDN-16 Console Running Snake Game](img alt="IDN-16 console window displaying the snake game with green snake sprites, red apple, and score display on a dark background")
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -65,20 +64,16 @@ These instructions will get you a copy of the project up and running on your loc
 You will need the following software installed:
 
 - `GCC` or `Clang` (C compiler)
-- `Make`
-- `SDL2` development libraries (for graphics, input handling, and sound)
+- `CMake` (version 3.10 or higher)
 - `Git` (to clone the repository)
 
 For Ubuntu/Debian, these can be installed by running the following:
 ```bash
 sudo apt update 
-sudo apt install build-essential libsdl2-dev libsdl2-ttf-dev libtiff-dev libavif-dev libwebp-dev libjpeg-dev libpng-dev flex bison git
+sudo apt install build-essential cmake git
 ```
 
-Or use the provided makefile target:
-```bash
-make install-deps
-```
+**Note:** SDL3 and other dependencies are automatically downloaded and built by CMake using FetchContent.
 
 ### Installing
 
@@ -90,36 +85,33 @@ cd IDN-16
 
 **Building the project**
 ```bash
-make all
+cmake -B build
+cmake --build build
 ```
 
-This will build the core emulator, assembler, and run the tests. To build specific components:
-
-```bash
-make core        # Build just the emulator
-make asmblr      # Build just the assembler
-make disasmblr   # Build just the disassembler
-make test        # Run unit tests only
-make dev         # Clean rebuild (development)
-```
+This will build the main IDN-16 emulator with integrated assembler and disassembler tools.
 
 **Quick Start Example**
 ```bash
-# Build everything
-make all
+# Build the project
+cmake -B build
+cmake --build build
 
-# Create a simple program
-echo "LDI r1, 42
-      HLT" > hello.asm
-
-# Assemble it
-./asm hello.asm hello.bin
-
-# Copy to ROM location
-cp hello.bin src/core/roms/hello.bin
+# Create a simple program that displays "H"
+echo "start:
+    LDI r1, 'H'
+    LOAD16 r2, 0xF301
+    JSR r2
+    idle:
+    JMP idle" > hello.asm
 
 # Run the emulator
-./idn16 --rom hello.bin
+./build/idn16
+
+# In the GUI:
+# 1. Tools → Assembler → Select hello.asm → Save as hello.bin
+# 2. File → Open ROM → Select hello.bin
+# 3. Run → Start/Resume
 ```
 
 **Development Workflow**
@@ -127,39 +119,30 @@ cp hello.bin src/core/roms/hello.bin
 # Edit your assembly file
 vim program.asm
 
-# Assemble and test
-./asm program.asm test.bin && cp test.bin src/core/roms/system.bin && ./idn16
+# Run the emulator
+./build/idn16
+
+# In the GUI:
+# 1. Tools → Assembler → Select program.asm → Save as program.bin
+# 2. File → Open ROM → Select program.bin
+# 3. Run → Start/Resume to execute
+# 4. View → CPU Registers and/or Assembly listings for debugging
 ```
 
 ## Tools
 
 ### Assembler
 
-The IDN-16 toolchain includes a custom assembler that compiles assembly language programs into binary machine code for the IDN-16 console.
-
-**Building the assembler:**
-```
-make asmblr
-```
+The IDN-16 includes an integrated assembler that compiles assembly language programs into binary machine code for the IDN-16 console.
 
 **Usage:**
-```bash
-./asm input.asm output.bin
-```
+1. Start the IDN-16 emulator: `./build/idn16`
+2. Go to **Tools → Assembler** in the menu
+3. Select your assembly source file (`input.asm`)
+4. Choose where to save the binary output file (`output.bin`)
+5. The assembler will process your code and create the binary
 
-Where:
-- `input.asm` is your assembly source file
-- `output.bin` is the binary output file that can be loaded into the emulator
-
-**Example:**
-```bash
-# Assemble startup.asm to system.bin
-./asm startup.asm system.bin
-
-# Assemble with variables and place in ROM directory
-./asm program.asm program.bin
-cp program.bin src/core/roms/system.bin
-```
+![Assembler in Action](img alt="Terminal showing assembler converting hello.asm to hello.bin with assembly process output and success message")
 
 The assembler is a two-pass system that:
 1. First pass: Collects all labels and their addresses
@@ -167,35 +150,18 @@ The assembler is a two-pass system that:
 
 ### Disassembler
 
-A disassembler is provided to convert binary machine code back to readable assembly language.
-
-**Building the disassembler:**
-```
-make disasmblr
-```
+The IDN-16 also includes an integrated disassembler to convert binary machine code back to readable assembly language.
 
 **Usage:**
-```bash
-./dasm input.bin
-```
-
-Where:
-- `input.bin` is the binary file containing IDN-16 machine code
-
-**Example:**
-```bash
-# Disassemble a ROM file
-./dasm src/core/roms/system.bin
-
-# Disassemble any binary file
-./dasm program.bin
-```
+1. Start the IDN-16 emulator: `./build/idn16`
+2. Go to **Tools → Disassembler** in the menu
+3. Select the binary file containing IDN-16 machine code (`input.bin`)
+4. Choose where to save the disassembled output file
+5. The disassembler will generate readable assembly instructions
 
 The disassembler will generate output showing each assembly instruction:
 
 ```
-Instruction
-------------------------
 LDI  r1, 0x05
 LDI  r2, 0x01
 CMP  r1, r2
@@ -205,159 +171,135 @@ HLT
 
 ### Example Programs
 
-**Hello World (Grid-based)**
+**Hello World**
 ```assembly
-CHAR_H = 72
-CHAR_E = 69
-CHAR_L = 76
-CHAR_O = 79
-
+; Simple text output - displays "HELLO" on screen
 start:
-    ; Clear screen
-    LOAD16 r1, 0xF300
+    LOAD16 r1, 0xF300       ; Clear screen
     JSR r1
-    
-    ; Display "HELLO" using cursor
-    LDI r1, CHAR_H
-    LOAD16 r2, 0xF301
+    LDI r1, 'H'             ; Display each character
+    LOAD16 r2, 0xF301       ; PUT_CHAR syscall
     JSR r2
-    
-    LDI r1, CHAR_E
+    LDI r1, 'E'
     JSR r2
-    
-    LDI r1, CHAR_L
+    LDI r1, 'L'
     JSR r2
-    JSR r2                  ; display 'L' twice
-    
-    LDI r1, CHAR_O
+    LDI r1, 'L'
+    JSR r2                  ; 'L' twice
+    LDI r1, 'O'
     JSR r2
-    
-    HLT
+idle:
+  jmp idle
 ```
 
-**Centered Text (Grid-based)**
+![Hello World Output](img alt="IDN-16 console displaying 'HELLO' in white text on black background")
+
+**Input Detection**
 ```assembly
-; Draw "IDN-16" centered on screen using cursor positioning
+; Check for button press and display result
 start:
-    LOAD16 r1, 0xF300       ; clear screen
-    JSR r1
-    
-    ; Position cursor at center (40x30 grid, so center is around 17,15)
-    LDI r1, 17              ; center x (character position)
-    LDI r2, 15              ; center y (character position)
-    LOAD16 r3, 0xF303       ; set cursor
+    LDI r1, 0               ; Controller 0
+    LOAD16 r2, 0xF309       ; GET_INPUT syscall
+    JSR r2
+    CMP r1, r0              ; Any button pressed?
+    JEQ start               ; No - keep checking
+    LDI r1, '*'             ; Yes - display asterisk
+    LOAD16 r2, 0xF301       ; PUT_CHAR
+    JSR r2
+idle:
+    JMP idle
+```
+
+**Math Operations**
+```assembly
+; Calculate 10 * 5 using system call
+start:
+    LOAD16 r2, 0xF310       ; PRINT_DEC syscall
+    LOAD16 r3, 0xF301       ; PRINT_CHAR syscall
+    LDI r1, 10              ; First number
+    JSR r2
+    LDI r1, ' '
+    JSR r3                  
+    LDI r1, '+'
     JSR r3
-    
-    ; Display "IDN-16" using PUT_CHAR
-    LDI r1, 'I'
-    LOAD16 r2, 0xF301       ; PUT_CHAR
+    LDI r1, ' '
+    JSR r3
+    LDI r1, 5               ; Second number
     JSR r2
-    
-    LDI r1, 'D'
-    JSR r2
-    
-    LDI r1, 'N'
-    JSR r2
-    
-    LDI r1, '-'
-    JSR r2
-    
-    LDI r1, '1'
-    JSR r2
-    
-    LDI r1, '6'
-    JSR r2
-    
-    HLT
-```
-
-**Input Handling**
-```assembly
-input_loop:
-    LDI r1, 0               ; controller 0
-    LOAD16 r2, 0xF309       ; GET_INPUT
-    JSR r2                  ; r1 = button state
-    
-    CMP r1, r0              ; check if any buttons pressed
-    JEQ input_loop          ; loop if no input
-    
-    ; Button pressed - display something
-    LDI r1, 42              ; asterisk character
-    LOAD16 r2, 0xF301       ; PUT_CHAR
-    JSR r2
-    
-    JMP input_loop
-```
-
-**Factorial Calculator**
-```assembly
-; Calculate factorial of 5
-factorial_demo:
-    LDI r1, 5               ; number to calculate
-    LDI r2, 1               ; result accumulator
-    
-factorial_loop:
-    CMP r1, r0              ; check if done
-    JEQ factorial_done
-    
-    ; Multiply r2 by r1 using system call
+    LDI r1, ' '
+    JSR r3
+    LDI r1, '='
+    JSR r3
+    LDI r1, ' '
+    JSR r3
+    LDI r1, 10
+    LDI r2, 5
     LOAD16 r3, 0xF30B       ; MULTIPLY syscall
-    JSR r3                  ; r1 = r2 * r1
-    MOV r2, r1              ; store result
+    JSR r3                  ; r1 = result
+    LOAD16 r2, 0xF310       ; PRINT_DEC syscall
+    JSR r2                  ; Display result
+idle:
+    JMP idle
+
+```
+
+![Math Calculation Result](img alt="IDN-16 console showing the result '50' displayed as decimal text after multiplication calculation")
+
+**Simple Sprite**
+```assembly
+; Create a yellow square sprite at screen center
+start:
+    ; First create a yellow square tile (tile_id 1)
+    LOAD16 r5, 0xF314       ; SYSCALL_SET_TILE_PIXEL_COLOR
+    LDI r1, 1               ; Tile id 1
+    LDI r2, 0               ; x coord
+    LDI r3, 0               ; y coord
+    LDI r4, 14              ; Yellow Palette Index
+    JSR r5                  ; Call syscall
     
-    DEC r1                  ; decrement counter
-    JMP factorial_loop
-    
-factorial_done:
-    ; Display result as decimal
-    MOV r1, r2
+    ; Create sprite at position (20, 15) with yellow tile
+    LDI r1, 0               ; Sprite ID
+    LDI r2, 20              ; X position
+    LDI r3, 15              ; Y position
+    LDI r4, 1               ; Tile ID (yellow square we just created)
+    LOAD16 r5, 0xF311       ; SET_SPRITE syscall
+    JSR r5
+idle:
+    JMP idle
+```
+
+![Simple Yellow Sprite](img alt="IDN-16 console displaying a single yellow 8x8 pixel square sprite centered on the black screen")
+
+**Timer Demo**
+```assembly
+; Display the number of seconds passed since program start
+start:
+    LDI r1, 2000            ; 2000ms = 2 seconds
+    LOAD16 r2, 0xF323       ; SLEEP syscall
+    JSR r2
+    LDI r1, 'D'             ; Display "DONE"
+    LOAD16 r2, 0xF301       ; PUT_CHAR
+    JSR r2
+idle:
+    JMP idle
+```
+![Timer counting](img alt="IDN-16 console displaying a timer in the top left corner displaying the current number of seconds since the program started")
+
+**Memory Access**
+```assembly
+; Store and retrieve data from memory
+start:
+    LOAD16 r1, 0x8000       ; RAM address
+    LDI r2, 42              ; Store value 42
+    STW r2, [r1]
+    LDW r3, [r1]            ; Load it back
+    MOV r1, r3              ; Move to r1 for display
     LOAD16 r2, 0xF310       ; PRINT_DEC
     JSR r2
-    HLT
+idle:
+    JMP idle
 ```
 
-**Simple Red Square Sprite Demo:**
-```assembly
-; IDN-16 Red Square Sprite Demo
-; Creates a red 8x8 square sprite at center of display
-
-; Memory addresses
-PALETTE_RAM_START = 0xD4D0        ; Palette colors (RGB565)
-SPRITE_TABLE_START = 0xD4F0       ; Sprite positions and tile IDs
-TILESET_DATA_START = 0xD5B0       ; Tile pixel data
-
-start:
-    ; Set up red color in palette slot 1
-    LOAD16 r1, PALETTE_RAM_START   ; Palette base address
-    ADDI r1, r1, 2                 ; Palette slot 1 (2 bytes per color)
-    LOAD16 r2, 0xF800              ; Red color (RGB565: 11111 000000 00000)
-    STW r2, [r1+0]                 ; Write red to palette slot 1
-    
-    ; Create red square tile (tile 1) - fill all 64 pixels
-    LOAD16 r1, TILESET_DATA_START  ; Tile 0 base
-    ADDI r1, r1, 64                ; Move to tile 1 (64 bytes per tile)
-    LDI r2, 1                      ; Palette index 1 (red)
-    LDI r3, 0                      ; Pixel counter
-    
-fill_tile:
-    STB r2, [r1+0]                 ; Write red pixel
-    ADDI r1, r1, 1                 ; Next pixel address
-    ADDI r3, r3, 1                 ; Increment counter
-    LDI r4, 64                     ; Total pixels
-    CMP r3, r4                     ; Check if done
-    JNE fill_tile                  ; Continue if not done
-    
-    ; Position sprite at center (20x15 tiles = center of 40x30 grid)
-    LOAD16 r1, SPRITE_TABLE_START  ; Sprite table base
-    LDI r2, 20                     ; X position (center)
-    STB r2, [r1+0]                 ; Write X coordinate
-    LDI r2, 15                     ; Y position (center)
-    STB r2, [r1+1]                 ; Write Y coordinate
-    LDI r2, 1                      ; Tile ID 1 (our red square)
-    STB r2, [r1+2]                 ; Write tile ID
-    
-    HLT
-```
 
 ## Documentation
 
@@ -422,11 +364,10 @@ Audio processing and sound generation registers (256 bytes available for audio c
 **Key Mappings:**
 - **Player 1**: WASD for movement, F/G for action buttons
 - **Player 2**: Arrow keys for movement
-- **Debug**: F1 (Debug mode), F4 (Memory dump)
 
 #### System Control (0xF200-0xF2FF)
-- **0xF200**: System status register
-- **0xF201**: Interrupt control register
+- **0xF200**: Reserved
+- **0xF201**: Reserved
 - **0xF202**: Timer counter (low byte)
 - **0xF203**: Timer counter (high byte)
 - **0xF206**: Frame counter (low byte)
@@ -446,6 +387,13 @@ The IDN-16 uses a **dual-mode graphics system**:
 **Text operations** use system calls and work like a traditional console.
 **Sprite operations** require direct memory manipulation for maximum performance.
 
+**Performance Specifications:**
+- **CPU Clock Speed**: 1 MHz (1,000,000 Hz)
+- **Display Refresh Rate**: 240 Hz
+- **Cycles per Frame**: ~4,167 cycles (at 1 MHz / 240 Hz)
+- **Memory Bus Width**: 16-bit
+- **Address Space**: 64KB (16-bit addressing)
+
 ### System Call Functions
 System calls handle text output, input, audio, math, sprite animation, and utility functions. These are accessed via specific memory addresses in the 0xF300-0xFFFF range. The IDN-16 now includes **35 total system calls** with enhanced sprite animation capabilities for game development.
 
@@ -462,7 +410,7 @@ System calls handle text output, input, audio, math, sprite animation, and utili
 | SYSCALL_FILL_AREA   | 0xF307  | r1=x, r2=y, r3=width, r4=height, r5=char | - | Fill rectangular area with character |
 | SYSCALL_SET_TEXT_COLOR | 0xF308 | r1=fg_color, r2=bg_color | - | Set foreground/background color |
 | SYSCALL_SET_PALETTE | 0xF312  | r1=palette_index, r2=color | r1=success(1/0) | Set palette color (RGB565) |
-| SYSCALL_SET_SPRITE_PIXEL | 0xF314 | r1=tile_id, r2=pixel_x, r3=pixel_y, r4=palette_index | r1=success(1/0) | Set individual sprite pixel color |
+| SYSCALL_SET_TILE_PIXEL | 0xF314 | r1=tile_id, r2=pixel_x, r3=pixel_y, r4=palette_index | r1=success(1/0) | Set individual tile pixel color |
 | SYSCALL_PRINT_HEX   | 0xF30F  | r1=number | - | Print number in hexadecimal |
 | SYSCALL_PRINT_DEC   | 0xF310  | r1=number | - | Print number in decimal |
 
@@ -509,32 +457,7 @@ System calls handle text output, input, audio, math, sprite animation, and utili
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
 | SYSCALL_PLAY_TONE   | 0xF30A  | r1=freq, r2=duration | r1=success(1/0) | Play audio tone |
-| SYS_PLAY_TONE     | 0x4400  | r1=freq, r2=duration, r3=channel | r1=success(1/0) | Play tone on audio channel (0-3) |
-| SYS_STOP_CHANNEL  | 0x4402  | r1=channel | r1=success(1/0) | Stop audio on specific channel |
-| SYS_SET_VOLUME    | 0x4404  | r1=channel, r2=volume(0-15) | r1=success(1/0) | Set channel volume |
-| SYS_SET_WAVEFORM  | 0x4406  | r1=channel, r2=waveform(0-3) | r1=success(1/0) | Set waveform (0=square, 1=sine, 2=triangle, 3=noise) |
 
-#### Extended Input Functions
-| Function | Address | Inputs | Outputs | Description |
-|----------|---------|--------|---------|-------------|
-| SYS_GET_KEYS | 0x4500 | r1=controller(0/1) | r1=button_state | Read current controller state |
-| SYS_WAIT_KEY | 0x4502 | - | r1=key_pressed | Wait for any key press |
-| SYS_KEY_PRESSED | 0x4504 | r1=controller, r2=key_bit(0-7) | r1=pressed(1/0) | Check if specific key is pressed |
-
-#### Extended Math Functions
-| Function | Address | Inputs | Outputs | Description |
-|----------|---------|--------|---------|-------------|
-| SYS_MULTIPLY | 0x4600 | r1=multiplicand, r2=multiplier | r1=result_low, r2=result_high | 16-bit multiplication |
-| SYS_ABS | 0x4606 | r1=signed_value | r1=absolute_value | Get absolute value |
-
-#### Extended Memory/Utility Functions
-| Function | Address | Inputs | Outputs | Description |
-|----------|---------|--------|---------|-------------|
-| SYS_MEMCPY | 0x4700 | r1=dest, r2=src, r3=length | r1=bytes_copied | Copy memory block |
-| SYS_MEMSET | 0x4702 | r1=dest, r2=value, r3=length | r1=bytes_set | Fill memory block with value |
-| SYS_STRLEN | 0x4704 | r1=string_addr | r1=length | Get string length |
-| SYS_STRCMP | 0x4706 | r1=string1, r2=string2 | r1=result(-1/0/1) | Compare strings |
-| SYS_STRCPY | 0x4708 | r1=dest, r2=src | r1=dest_addr | Copy string |
 
 **Usage Examples:**
 
@@ -641,7 +564,6 @@ Sprites are controlled by writing directly to video memory regions:
 
 **Sprite System Rules:**
 - Sprites are disabled when Tile_ID = 0
-- Palette index 0 = transparent (not rendered)
 - Palette indices 1-15 = visible colors
 - Palette indices 16+ = use previous valid palette color (1-15) from the current tile
 
@@ -650,7 +572,7 @@ Sprites are controlled by writing directly to video memory regions:
 ; Memory addresses
 PALETTE_RAM_START = 0xD4D0
 SPRITE_TABLE_START = 0xD4F0
-TILESET_DATA_START = 0xD5B0
+TILESET_DATA_START = 0xE300
 
 ; Set up red color in palette slot 1
 LOAD16 r1, PALETTE_RAM_START
@@ -747,13 +669,13 @@ All instructions are 16 bits wide:
 
 #### IMM-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                               | Immediate Size & Range |
+| Opcode  | Assembly Syntax                       | Usage                               | Immediate Size & Range | Binary note  |
 | ------- | ------------------------------------- | ----------------------------------- | ---------------------- |
-| 01000   | LDI rd, imm                           | Load immediate (sign extends)       | 8 bits: -128 to +255   |
+| 01000   | LDI rd, imm                           | Load immediate (sign extends)       | 8 bits: -128 to +255   | The remaining 8 bits are used for the immediate |
 | 01001   | LDW rd, [rs1+imm]                     | Load word from memory               | 5 bits: -16 to +31     |
 | 01010   | STW rd, [rs1+imm]                     | Store word to memory                | 5 bits: -16 to +31     |
 | 01011   | ADDI rd, rs1, imm                     | Add immediate (sign extends)        | 5 bits: -16 to +31     |
-| 01100   | LUI rd, imm                           | Load immediate to upper 8 bits      | 8 bits: 0 to 255       |
+| 01100   | LUI rd, imm                           | Load immediate to upper 8 bits      | 8 bits: 0 to 255       | The remaining 8 bits are used for the immediate |
 | 01101   | ANDI rd, rs1, imm                     | AND immediate (no sign extension)   | 5 bits: 0 to 31        |
 | 01110   | ORI rd, rs1, imm                      | OR immediate (no sign extension)    | 5 bits: 0 to 31        |
 | 01111   | XORI rd, rs1, imm                     | XOR immediate (no sign extension)   | 5 bits: 0 to 31        |
@@ -767,26 +689,26 @@ All instructions are 16 bits wide:
 
 #### JB-Format Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                               |
-| ------- | ------------------------------------- | ------------------------------------|
-| 10000   | JMP offset                            | Unconditional jump                  |
-| 10001   | JEQ offset                            | Jump if equal                       |
-| 10010   | JNE offset                            | Jump if not equal                   |
-| 10011   | JGT offset                            | Jump if greater than                |
-| 10100   | JLT offset                            | Jump if less than                   |
-| 10101   | JSR reg                               | Jump to subroutine + store pc in ra |
-| 10110   | RET                                   | Return by jumping to address in ra  |
+| Opcode  | Assembly Syntax                       | Usage                               | Binary note  |
+| ------- | ------------------------------------- | ------------------------------------|       |
+| 10000   | JMP offset                            | Unconditional jump                  |       |
+| 10001   | JEQ offset                            | Jump if equal                       |       |
+| 10010   | JNE offset                            | Jump if not equal                   |       |
+| 10011   | JGT offset                            | Jump if greater than                |       |
+| 10100   | JLT offset                            | Jump if less than                   |       |
+| 10101   | JSR reg                               | Jump to subroutine + store pc in ra | This instruction uses the REG-format for its binary representation with rs1, rs2, and func code being blank |
+| 10110   | RET                                   | Return by jumping to address in ra  | This instruction only contains the opcode, the remaining values are ignored|
 
 #### SP-Format (and extra) Instructions
 
-| Opcode  | Assembly Syntax                       | Usage                               |
+| Opcode  | Assembly Syntax                       | Usage                               | Binary Note |
 | ------- | ------------------------------------- | ------------------------------------|
 | 11000   | HLT                                   | Halt processor                      |
 | 11001   | NOP count                             | Insert 'count' NOP instructions     |
 | 11010   | INC rd                                | Increment register                  |
 | 11011   | DEC rd                                | Decrement register                  |
-| 11100   | LDB rd, [rs1+imm]                     | Load byte from memory               |
-| 11101   | STB rd, [rs1+imm]                     | Store byte to memory                |
+| 11100   | LDB rd, [rs1+imm]                     | Load byte from memory               | Treat as IMM-Format |
+| 11101   | STB rd, [rs1+imm]                     | Store byte to memory                | Treat as IMM-Format |
 ### Assembly Language
 #### Syntax Overview
 ```
@@ -807,25 +729,25 @@ The assembler supports variable and constant definitions that can be used throug
 
 ```assembly
 ; Define constants
-SCREEN_WIDTH = 320
-SCREEN_HEIGHT = 240
+x = 10
+y = 20
+OFFSET = 0x100
 MAX_SPRITES = 1200
 
 ; Define memory addresses
 VIDEO_BASE = 0x3000
-INPUT_REG = 0x4100
 
 ; Use in instructions
-LDI r1, SCREEN_WIDTH    ; Load 320 into r1
-LOAD16 r2, VIDEO_BASE   ; Load 0x3000 into r2
-LDW r3, [INPUT_REG]     ; Load from address 0x4100
+LDI r1, SCREEN_WIDTH        ; Load 320 into r1
+LOAD16 r2, VIDEO_BASE       ; Load 0x3000 into r2
+LDW r3, [r2 + OFFSET]       ; Load from address 0x3100
 ```
 
 **Variable Assignment Syntax:**
 - `IDENTIFIER = value` - Define a constant or memory address
 - Values can be decimal, hexadecimal (`0x1234`), binary (`0b1010`), or character literals (`'A'`)
 - Variables can be used anywhere an immediate value is expected
-- Case-insensitive (both `VIDEO_BASE` and `video_base` work)
+- Case-sensitive (`VIDEO_BASE` and `video_base` are different variables)
 #### Addressing Modes
 - **Immediate:** LDI r1, 5
 - **Character:** LDI r1, 'a'
@@ -877,29 +799,17 @@ NOP                     ; Single no-operation
 
 ; Multiple NOPs with immediate values
 NOP 5                   ; Insert 5 NOP instructions
-NOP 0x10                ; Insert 16 NOP instructions  
 NOP 255                 ; Insert 255 NOP instructions
-
-; Multiple NOPs using constants
-PADDING_SIZE = 128
-NOP PADDING_SIZE        ; Insert 128 NOP instructions
-
-; Practical usage for memory alignment
-audio_functions:
-    NOP 112             ; Pad to specific address
-    ; functions start here...
 ```
 
 **Supported NOP Formats:**
 - `NOP` - Single NOP instruction
 - `NOP immediate` - Multiple NOPs
-- `NOP identifier` - Multiple NOPs using defined constants
 
 This is particularly useful for:
 - Memory alignment and padding
 - Function table organization  
 - Creating gaps for future expansion
-- System ROM address management
 ## Development
 
 ### Development Tools
@@ -913,10 +823,10 @@ The IDN-16 includes comprehensive development and debugging tools:
 - Error reporting with line numbers
 
 **Runtime Debug Features:**
-- **F1**: Toggle debug mode for real-time system monitoring
-- **F4**: Memory dump to inspect memory regions
 - ROM loading support for easy program deployment
-- Real-time display of CPU state and memory contents
+- Real-time display of CPU register state and memory contents
+
+![Debug Mode Display](img alt="IDN-16 console showing CPU registers and memory values in real-time overlay")
 
 **Graphics Development:**
 - Tile-based rendering system (40×30 tiles of 8×8 pixels)
@@ -929,13 +839,16 @@ The project includes comprehensive test suites for both the CPU and memory subsy
 
 **Running the tests:**
 ```bash
-make test
+cmake -B build
+cmake --build build
+ctest --test-dir build
 ```
+
+![Test Suite Results](img alt="Terminal showing all unit tests passing with green checkmarks for CPU, memory, assembler, and disassembler tests")
 
 **Individual test components:**
 ```bash
-make run_test_memory    # Test memory subsystem only
-make run_test_cpu       # Test CPU subsystem only
+ctest --test-dir build --verbose  # Run all tests with detailed output
 ```
 
 The test suite uses Unity as the testing framework and validates:

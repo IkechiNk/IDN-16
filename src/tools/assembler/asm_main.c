@@ -7,7 +7,10 @@
 
 // Flex/Bison externs
 extern FILE* yyin;
+extern int yylineno;
 int yyparse(void);
+int yylex_destroy(void);
+void yyrestart(FILE *input_file);
 
 
 void add_newline_to_file(const char* filename) {
@@ -43,15 +46,25 @@ void add_newline_to_file(const char* filename) {
 }
 
 int internal_assemble(const char* filein, const char* fileout) {
+    // Reset all static variables to initial state
+    reset_codegen();
+    reset_lexer();
+    
     add_newline_to_file(filein);
     yyin = fopen(filein, "rw");
     if (!yyin) {
         perror("fopen input");
         return EXIT_FAILURE;
     }
+    
+    // Reset flex/bison state
+    yylineno = 1;
+    yyrestart(yyin);
+    
     // Parse all lines (first pass collects labels & emits with placeholders)
     if (yyparse() != 0) {
         fprintf(stderr, "Assembly failed due to parse errors\n");
+        fclose(yyin);
         return EXIT_FAILURE;
     }
     fclose(yyin);

@@ -187,10 +187,10 @@ void test_disassemble_jlt_instruction(void) {
 }
 
 void test_disassemble_jsr_instruction(void) {
-    // JSR 300 - opcode=21
-    uint16_t word = (21 << 11) | 300;
+    // JSR r1 - opcode=21
+    uint16_t word = (21 << 11) | (1 << 8);
     char* result = disassemble_word(word);
-    TEST_ASSERT_EQUAL_STRING("JSR  300\n", result);
+    TEST_ASSERT_EQUAL_STRING("JSR  r1\n", result);
 }
 
 void test_disassemble_ret_instruction(void) {

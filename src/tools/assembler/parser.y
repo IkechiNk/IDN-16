@@ -137,7 +137,7 @@ instruction:
   | JLT  IMM5                                       { emit_jb_format_imm($1, 0b10100, $2); }
   | JLT  IMM8                                       { emit_jb_format_imm($1, 0b10100, $2); }
   | JLT  OFFSET                                     { emit_jb_format_imm($1, 0b10100, $2); }
-  | JSR  REG                                        { emit_reg_format($1, 0b10101, 0, $2, 0, 0); }
+  | JSR  REG                                        { emit_reg_format($1, 0b10101, $2, 0, 0, 0); }
   | RET                                             { emit_jb_format_imm($1, 0b10110, 0); }
   
   | HLT                                             { emit_special_format($1, 0b11000, 0, 0, 0); }

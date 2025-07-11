@@ -41,4 +41,7 @@ void emit_pop_pseudo(uint16_t pc, uint8_t reg);
 // After all emits, resolve identifiers and write out the final binary
 void finalize_output(const char* filename);
 
+// Reset all static variables to initial state (call before each assembly run)
+void reset_codegen(void);
+
 #endif // CODEGEN_H

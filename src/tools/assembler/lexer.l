@@ -16,57 +16,67 @@ void save_token_info() {
 %}
 
 %option yylineno
-%option case-insensitive
 
 %%
 
 ";"[^\n]*   {/* Do nothing with comments */}
 
-"ADD"          { save_token_info(); yylval.pc = pc; pc +=2; return ADD; }
-"SUB"          { save_token_info(); yylval.pc = pc; pc +=2; return SUB; }
-"AND"          { save_token_info(); yylval.pc = pc; pc +=2; return AND; }
-"OR"           { save_token_info(); yylval.pc = pc; pc +=2; return OR;  }
-"XOR"          { save_token_info(); yylval.pc = pc; pc +=2; return XOR; }
-"SHL"          { save_token_info(); yylval.pc = pc; pc +=2; return SHL; }
-"SHR"          { save_token_info(); yylval.pc = pc; pc +=2; return SHR; }
-"SRA"          { save_token_info(); yylval.pc = pc; pc +=2; return SRA; }
-"MOV"          { save_token_info(); yylval.pc = pc; pc +=2; return MOV; }
-"CMP"          { save_token_info(); yylval.pc = pc; pc +=2; return CMP; }
-"NOT"          { save_token_info(); yylval.pc = pc; pc +=2; return NOT; }
+"ADD"|"add"          { save_token_info(); yylval.pc = pc; pc +=2; return ADD; }
+"SUB"|"sub"          { save_token_info(); yylval.pc = pc; pc +=2; return SUB; }
+"AND"|"and"          { save_token_info(); yylval.pc = pc; pc +=2; return AND; }
+"OR"|"or"            { save_token_info(); yylval.pc = pc; pc +=2; return OR;  }
+"XOR"|"xor"          { save_token_info(); yylval.pc = pc; pc +=2; return XOR; }
+"SHL"|"shl"          { save_token_info(); yylval.pc = pc; pc +=2; return SHL; }
+"SHR"|"shr"          { save_token_info(); yylval.pc = pc; pc +=2; return SHR; }
+"SRA"|"sra"          { save_token_info(); yylval.pc = pc; pc +=2; return SRA; }
+"MOV"|"mov"          { save_token_info(); yylval.pc = pc; pc +=2; return MOV; }
+"CMP"|"cmp"          { save_token_info(); yylval.pc = pc; pc +=2; return CMP; }
+"NOT"|"not"          { save_token_info(); yylval.pc = pc; pc +=2; return NOT; }
 
-"LDI"          { save_token_info(); yylval.pc = pc; pc +=2; return LDI; }
-"LDW"          { save_token_info(); yylval.pc = pc; pc +=2; return LDW; }
-"STW"          { save_token_info(); yylval.pc = pc; pc +=2; return STW; }
-"ADDI"         { save_token_info(); yylval.pc = pc; pc +=2; return ADDI;}
-"LUI"          { save_token_info(); yylval.pc = pc; pc +=2; return LUI; }
-"ANDI"         { save_token_info(); yylval.pc = pc; pc +=2; return ANDI;}
-"ORI"          { save_token_info(); yylval.pc = pc; pc +=2; return ORI; }
-"XORI"         { save_token_info(); yylval.pc = pc; pc +=2; return XORI;}
+"LDI"|"ldi"          { save_token_info(); yylval.pc = pc; pc +=2; return LDI; }
+"LDW"|"ldw"          { save_token_info(); yylval.pc = pc; pc +=2; return LDW; }
+"STW"|"stw"          { save_token_info(); yylval.pc = pc; pc +=2; return STW; }
+"ADDI"|"addi"        { save_token_info(); yylval.pc = pc; pc +=2; return ADDI;}
+"LUI"|"lui"          { save_token_info(); yylval.pc = pc; pc +=2; return LUI; }
+"ANDI"|"andi"        { save_token_info(); yylval.pc = pc; pc +=2; return ANDI;}
+"ORI"|"ori"          { save_token_info(); yylval.pc = pc; pc +=2; return ORI; }
+"XORI"|"xori"        { save_token_info(); yylval.pc = pc; pc +=2; return XORI;}
 
-"JMP"          { save_token_info(); yylval.pc = pc; pc +=2; return JMP; }
-"JEQ"          { save_token_info(); yylval.pc = pc; pc +=2; return JEQ; }
-"JNE"          { save_token_info(); yylval.pc = pc; pc +=2; return JNE; }
-"JGT"          { save_token_info(); yylval.pc = pc; pc +=2; return JGT; }
-"JLT"          { save_token_info(); yylval.pc = pc; pc +=2; return JLT; }
-"JSR"          { save_token_info(); yylval.pc = pc; pc +=2; return JSR; }
-"CALL"         { save_token_info(); yylval.pc = pc; pc +=2; return JSR; }
-"RET"          { save_token_info(); yylval.pc = pc; pc +=2; return RET; }
+"JMP"|"jmp"          { save_token_info(); yylval.pc = pc; pc +=2; return JMP; }
+"JEQ"|"jeq"          { save_token_info(); yylval.pc = pc; pc +=2; return JEQ; }
+"JNE"|"jne"          { save_token_info(); yylval.pc = pc; pc +=2; return JNE; }
+"JGT"|"jgt"          { save_token_info(); yylval.pc = pc; pc +=2; return JGT; }
+"JLT"|"jlt"          { save_token_info(); yylval.pc = pc; pc +=2; return JLT; }
+"JSR"|"jsr"          { save_token_info(); yylval.pc = pc; pc +=2; return JSR; }
+"CALL"|"call"        { save_token_info(); yylval.pc = pc; pc +=2; return JSR; }
+"RET"|"ret"          { save_token_info(); yylval.pc = pc; pc +=2; return RET; }
 
-"HLT"          { save_token_info(); yylval.pc = pc; pc +=2; return HLT; }
-"NOP "[0-9]+   { save_token_info(); yylval.nops.count = atoi(yytext+4); yylval.nops.start_pc = pc; pc += atoi(yytext+4) * 2; return NOP; }
-"INC"          { save_token_info(); yylval.pc = pc; pc +=2; return INC; }
-"DEC"          { save_token_info(); yylval.pc = pc; pc +=2; return DEC; }
-"LDB"          { save_token_info(); yylval.pc = pc; pc +=2; return LDB; }
-"STB"          { save_token_info(); yylval.pc = pc; pc +=2; return STB; }
+"HLT"|"hlt"          { save_token_info(); yylval.pc = pc; pc +=2; return HLT; }
+("NOP"|"nop")(" "[0-9]*)?         { 
+                        save_token_info(); 
+                        if (strlen(yytext) > 4) {
+                            yylval.nops.count = atoi(yytext+4); 
+                        } else {
+                            yylval.nops.count = 1;
+                        }
+                        yylval.nops.start_pc = pc; 
+                        pc += yylval.nops.count * 2; 
+                        return NOP;
+                     }
+"INC"|"inc"          { save_token_info(); yylval.pc = pc; pc +=2; return INC; }
+"DEC"|"dec"          { save_token_info(); yylval.pc = pc; pc +=2; return DEC; }
+"LDB"|"ldb"          { save_token_info(); yylval.pc = pc; pc +=2; return LDB; }
+"STB"|"stb"          { save_token_info(); yylval.pc = pc; pc +=2; return STB; }
 
-"LOAD16"       { save_token_info(); yylval.pc = pc; pc += 4; return LOAD16; }
-"PUSH"         { save_token_info(); yylval.pc = pc; pc += 4; return PUSH; }
-"POP"          { save_token_info(); yylval.pc = pc; pc += 4; return POP; }
+"LOAD16"|"load16"    { save_token_info(); yylval.pc = pc; pc += 4; return LOAD16; }
+"PUSH"|"push"        { save_token_info(); yylval.pc = pc; pc += 4; return PUSH; }
+"POP"|"pop"          { save_token_info(); yylval.pc = pc; pc += 4; return POP; }
 
-"r"[0-7]       { save_token_info(); yylval.reg = atoi(yytext+1); return REG; }
-"zero"         { save_token_info(); yylval.reg = 0; return REG;}
-"sp"           { save_token_info(); yylval.reg = 6; return REG;}
-"ra"           { save_token_info(); yylval.reg = 7; return REG;}
+("r"|"R")[0-7]             { save_token_info(); yylval.reg = atoi(yytext+1); return REG; }
+"zero"|"ZERO"        { save_token_info(); yylval.reg = 0; return REG;}
+"sp"|"SP"            { save_token_info(); yylval.reg = 6; return REG;}
+"ra"|"RA"            { save_token_info(); yylval.reg = 7; return REG;}
+
 "["            { save_token_info(); return '['; }
 "]"            { save_token_info(); return ']'; }
 ","            { save_token_info(); return ','; }
@@ -199,3 +209,11 @@ void save_token_info() {
 }
 
 %%
+
+void reset_lexer(void) {
+    // Reset program counter to initial state
+    pc = 0;
+    
+    // Clear current token buffer
+    current_token[0] = '\0';
+}

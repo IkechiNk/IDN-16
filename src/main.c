@@ -19,7 +19,9 @@
 #define COLOR_LIGHT (Clay_Color){224, 215, 210, 255}
 #define COLOR_ORANGE (Clay_Color){225, 138, 50, 255}
 #define COLOR_RED (Clay_Color){205, 92, 92, 255}
+#define COLOR_RED_HOVER (Clay_Color) {163, 50, 50, 255}
 #define COLOR_GREEN (Clay_Color){142, 177, 92, 255}
+#define COLOR_GREEN_HOVER (Clay_Color){100, 135, 50, 255}
 #define COLOR_BLUE (Clay_Color){111, 173, 162, 255}
 #define COLOR_BLACK (Clay_Color){0, 0, 0, 255}
 #define COLOR_WHITE (Clay_Color){255, 255, 255, 255}
@@ -47,6 +49,13 @@ bool display_registers = false;
 bool display_assembly = false;
 bool cycling = false;
 static int visible_menu = -1;
+
+// Memory dump modal state
+bool show_memory_dump_modal = false;
+char start_addr_buffer[7] = "0x";
+char bytes_per_line_buffer[4] = "16";
+char num_lines_buffer[4] = "10";
+int focused_textbox = -1; // 0=start_addr, 1=bytes_per_line, 2=num_lines, -1=none
 
 static FILE* loaded_rom_file = NULL;
 static uint64_t sleep_from = 0;
@@ -101,6 +110,78 @@ void Handle_Clay_Errors(Clay_ErrorData error_data) {
     printf("%s\n", error_data.errorText.chars);
 }
 
+// Memory dump modal functions
+void Modal_Textbox_Click(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
+    if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+        focused_textbox = (int)userData;
+    }
+}
+
+void Modal_Textbox(Clay_String label, char* buffer, int buffer_size, int textbox_id) {
+    bool is_focused = (focused_textbox == textbox_id);
+    
+    CLAY((Clay_ElementDeclaration) {
+        .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .childGap = 4 }
+    }) {
+        // Label
+        CLAY_TEXT(label, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 12, .textColor = COLOR_LIGHT }));
+        
+        // Textbox
+        CLAY((Clay_ElementDeclaration) {
+            .layout = { 
+                .padding = {8, 8, 8, 8}, 
+                .sizing = {.width = CLAY_SIZING_FIXED(200), .height = CLAY_SIZING_FIXED(30)},
+                .childAlignment = {.y = CLAY_ALIGN_Y_CENTER}
+            },
+            .backgroundColor = COLOR_WHITE,
+            .cornerRadius = CLAY_CORNER_RADIUS(3),
+            .border = { .color = is_focused ? COLOR_BLUE : COLOR_DARK, .width = {2, 2, 2, 2} }
+        }) {
+            Clay_OnHover(Modal_Textbox_Click, (intptr_t)textbox_id);
+            Clay_String text = {.chars = buffer, .length = strlen(buffer), .isStaticallyAllocated = false};
+            CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = COLOR_BLACK }));
+        }
+    }
+}
+
+void Modal_OK_Click(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
+    if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+        // Parse and validate inputs
+        uint16_t start_addr = 0;
+        uint16_t bytes_per_line = 0;
+        uint16_t num_lines = 0;
+        
+        // Parse start address (hex)
+        if (start_addr_buffer[0] == '0' && (start_addr_buffer[1] == 'x' || start_addr_buffer[1] == 'X')) {
+            start_addr = (uint16_t)strtoul(start_addr_buffer, NULL, 16);
+        } else {
+            start_addr = (uint16_t)strtoul(start_addr_buffer, NULL, 16);
+        }
+        
+        // Parse bytes per line and num lines (decimal)
+        bytes_per_line = (uint16_t)strtoul(bytes_per_line_buffer, NULL, 10);
+        num_lines = (uint16_t)strtoul(num_lines_buffer, NULL, 10);
+        
+        // Validate inputs
+        if (bytes_per_line > 0 && num_lines > 0) {
+            memory_dump(cpu->memory, start_addr, bytes_per_line, num_lines);
+        }
+        
+        // Close modal
+        show_memory_dump_modal = false;
+        focused_textbox = -1;
+        SDL_StopTextInput(window);
+    }
+}
+
+void Modal_Cancel_Click(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
+    if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+        show_memory_dump_modal = false;
+        focused_textbox = -1;
+        SDL_StopTextInput(window);
+    }
+}
+
 // Menu action handler functions
 void run_reset_cpu();
 void file_close_rom() { 
@@ -130,7 +211,6 @@ void file_open_rom() {
 }
 void file_exit() { cpu->running = false; }
 
-void view_memory_viewer() { memory_dump(cpu->memory, 0x0000, 64, 16); }
 void view_cpu_registers() { display_registers = !display_registers; }
 void view_assembly_listing() { display_assembly = !display_assembly; }
 
@@ -225,12 +305,17 @@ void tools_disassembler() {
     internal_disassemble(input, output);
     free(input);
  }
-void tools_memory_dump() { printf("Memory Editor\n"); }
+
+void tools_memory_dump() {
+    show_memory_dump_modal = true;
+    focused_textbox = 0; // Focus on first textbox
+    SDL_StartTextInput(window); // Enable text input events
+}
 
 typedef void (*MenuAction)(void);
 
 MenuAction file_actions[] = { file_open_rom, file_close_rom, file_exit };
-MenuAction view_actions[] = { view_memory_viewer, view_cpu_registers, view_assembly_listing };
+MenuAction view_actions[] = { view_cpu_registers, view_assembly_listing };
 MenuAction run_actions[] = { run_start_resume, run_pause, run_step_instruction, run_reset_cpu };
 MenuAction tools_actions[] = { tools_assembler, tools_disassembler, tools_memory_dump };
 
@@ -316,7 +401,6 @@ Clay_String *file_menu_items[] = {
 };
 // View menu items
 Clay_String *view_menu_items[] = {
-    &CLAY_STRING("Memory Viewer (F1)"),
     &CLAY_STRING("CPU Registers"),
     &CLAY_STRING("Assembly Listing"),
     NULL
@@ -342,8 +426,7 @@ Clay_RenderCommandArray App_Create_Layout() {
     Clay_ElementDeclaration main_section = { .id = CLAY_ID("Main"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Expand, .padding = CLAY_PADDING_ALL(0), .childGap = 16}, .backgroundColor = COLOR_DARK };
     Clay_ElementDeclaration header_section = { .id = CLAY_ID("Header"), .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = Layout_Header, .padding = { 16, 16, 3, 2 }, .childGap = 16, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }}, .backgroundColor = COLOR_GREEN };
     Clay_ElementDeclaration center = { .id = CLAY_ID("Center"), .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = Layout_Expand, .padding = { 0, 0, 0, 12}, .childGap = 16, .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER} }, .backgroundColor = COLOR_DARK };
-    Clay_ElementDeclaration emulator_section_decl = { 
-        .id = CLAY_ID("Emulator"), 
+    Clay_ElementDeclaration emulator_section_decl = { .id = CLAY_ID("Emulator"), 
         .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .padding = { 0, 0, 0, 0 }, .sizing = Layout_Expand}, 
         .backgroundColor = COLOR_BLACK, 
         .image = { .imageData = display ? display->texture : NULL },
@@ -351,7 +434,18 @@ Clay_RenderCommandArray App_Create_Layout() {
     };
     Clay_ElementDeclaration register_section = { .id = CLAY_ID("Registers"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Registers, .padding = { 8, 8, 8, 8 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
     Clay_ElementDeclaration assembly_section = { .id = CLAY_ID("Assembly"), .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = Layout_Assembly, .padding = { 8, 8, 8, 0 }, .childGap = 8 }, .backgroundColor = COLOR_DARK };
-
+    Clay_ElementDeclaration memdump_section = { .id = CLAY_ID("Memdump"),
+        .floating = (Clay_FloatingElementConfig) {
+            .attachTo = CLAY_ATTACH_TO_PARENT,
+            .attachPoints = {.element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER},
+        },
+        .layout = { 
+            .sizing = {.width = CLAY_SIZING_PERCENT(1.0f), .height = CLAY_SIZING_PERCENT(1.0f)},
+            .childAlignment = {.x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER}
+        },
+        .backgroundColor = (Clay_Color){0, 0, 0, 180}
+    };
+    
     CLAY(main_section) {
         CLAY(header_section) {
             Header_Button(CLAY_STRING("File_but"), CLAY_STRING("File"), CLAY_STRING("File_menu"), file_menu_items, 0);
@@ -430,6 +524,70 @@ Clay_RenderCommandArray App_Create_Layout() {
                 };
             }
         };
+        
+        // Memory dump modal
+        if (show_memory_dump_modal) {
+            // Modal backdrop
+            CLAY(memdump_section) {
+                // Modal dialog
+                CLAY((Clay_ElementDeclaration) {
+                    .layout = { 
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .padding = {20, 20, 20, 20},
+                        .childGap = 16,
+                        .sizing = {.width = CLAY_SIZING_FIXED(400), .height = CLAY_SIZING_FIXED(300)}
+                    },
+                    .backgroundColor = COLOR_DARK,
+                    .cornerRadius = CLAY_CORNER_RADIUS(10),
+                    .border = { .color = COLOR_GREEN, .width = {2, 2, 2, 2} }
+                }) {
+                    // Title
+                    CLAY_TEXT(CLAY_STRING("Memory Dump"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 16, .textColor = COLOR_LIGHT }));
+                    
+                    // Input fields
+                    CLAY((Clay_ElementDeclaration) {
+                        .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .childGap = 12 }
+                    }) {
+                        Modal_Textbox(CLAY_STRING("Start Address (hex):"), start_addr_buffer, sizeof(start_addr_buffer), 0);
+                        Modal_Textbox(CLAY_STRING("Bytes per Line:"), bytes_per_line_buffer, sizeof(bytes_per_line_buffer), 1);
+                        Modal_Textbox(CLAY_STRING("Number of Lines:"), num_lines_buffer, sizeof(num_lines_buffer), 2);
+                    }
+                    
+                    // Buttons
+                    CLAY((Clay_ElementDeclaration) {
+                        .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .childGap = 12, .padding = {0, 0, 10, 0} }
+                    }) {
+                        // OK Button
+                        CLAY((Clay_ElementDeclaration) {
+                            .layout = { 
+                                .padding = {12, 12, 8, 8}, 
+                                .sizing = {.width = CLAY_SIZING_FIXED(80), .height = CLAY_SIZING_FIXED(32)},
+                                .childAlignment = {.x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER}
+                            },
+                            .backgroundColor = Clay_Hovered() ? COLOR_GREEN_HOVER : COLOR_GREEN,
+                            .cornerRadius = CLAY_CORNER_RADIUS(5),
+                        }) {
+                            Clay_OnHover(Modal_OK_Click, 0);
+                            CLAY_TEXT(CLAY_STRING("OK"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = COLOR_LIGHT }));
+                        }
+                        
+                        // Cancel Button
+                        CLAY((Clay_ElementDeclaration) {
+                            .layout = { 
+                                .padding = {12, 12, 8, 8}, 
+                                .sizing = {.width = CLAY_SIZING_FIXED(80), .height = CLAY_SIZING_FIXED(32)},
+                                .childAlignment = {.x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER}
+                            },
+                            .backgroundColor = Clay_Hovered() ? COLOR_RED_HOVER : COLOR_RED,
+                            .cornerRadius = CLAY_CORNER_RADIUS(5),
+                        }) {
+                            Clay_OnHover(Modal_Cancel_Click, 0);
+                            CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({ .fontId = FONT_ID, .fontSize = 10, .textColor = COLOR_LIGHT }));
+                        }
+                    }
+                }
+            }
+        }
     };
     return Clay_EndLayout();
 }
@@ -462,7 +620,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to allocate memory for the font array: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    TTF_Font *font = TTF_OpenFont("../resources/fonts/PixelifySans.ttf", 24);
+    TTF_Font *font = TTF_OpenFont("resources/fonts/PixelifySans.ttf", 24);
     if (!font) {
         SDL_Log("Failed to load font: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
@@ -507,17 +665,110 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             cpu->running = false;
             break;
         case SDL_EVENT_KEY_DOWN:
-            key_handler(display, event);
+            if (show_memory_dump_modal) {
+                // Handle modal keyboard input
+                if (event->key.key == SDLK_ESCAPE) {
+                    show_memory_dump_modal = false;
+                    focused_textbox = -1;
+                    SDL_StopTextInput(window);
+                } else if (event->key.key == SDLK_RETURN) {
+                    // Simulate OK button click
+                    if (focused_textbox >= 0) {
+                        // Parse and validate inputs
+                        uint16_t start_addr = 0;
+                        uint16_t bytes_per_line = 0;
+                        uint16_t num_lines = 0;
+                        
+                        // Parse start address (hex)
+                        if (start_addr_buffer[0] == '0' && (start_addr_buffer[1] == 'x' || start_addr_buffer[1] == 'X')) {
+                            start_addr = (uint16_t)strtoul(start_addr_buffer, NULL, 16);
+                        } else {
+                            start_addr = (uint16_t)strtoul(start_addr_buffer, NULL, 16);
+                        }
+                        
+                        // Parse bytes per line and num lines (decimal)
+                        bytes_per_line = (uint16_t)strtoul(bytes_per_line_buffer, NULL, 10);
+                        num_lines = (uint16_t)strtoul(num_lines_buffer, NULL, 10);
+                        
+                        // Validate inputs
+                        if (bytes_per_line > 0 && num_lines > 0) {
+                            memory_dump(cpu->memory, start_addr, bytes_per_line, num_lines);
+                        }
+                        
+                        // Close modal
+                        show_memory_dump_modal = false;
+                        focused_textbox = -1;
+                        SDL_StopTextInput(window);
+                    }
+                } else if (event->key.key == SDLK_TAB) {
+                    // Tab between textboxes
+                    focused_textbox = (focused_textbox + 1) % 3;
+                } else if (event->key.key == SDLK_BACKSPACE && focused_textbox >= 0) {
+                    // Handle backspace
+                    char* buffer = (focused_textbox == 0) ? start_addr_buffer : 
+                                   (focused_textbox == 1) ? bytes_per_line_buffer : num_lines_buffer;
+                    int len = strlen(buffer);
+                    
+                    // For start address, protect "0x" prefix
+                    if (focused_textbox == 0) {
+                        if (len > 2) {  // Only allow deletion if more than "0x"
+                            buffer[len - 1] = '\0';
+                        }
+                    } else {
+                        // For other fields, allow normal backspace
+                        if (len > 0) {
+                            buffer[len - 1] = '\0';
+                        }
+                    }
+                }
+            } else {
+                key_handler(display, event);
+            }
+            break;
+        case SDL_EVENT_TEXT_INPUT:
+            if (show_memory_dump_modal && focused_textbox >= 0) {
+                
+                char* buffer = (focused_textbox == 0) ? start_addr_buffer : 
+                               (focused_textbox == 1) ? bytes_per_line_buffer : num_lines_buffer;
+                int buffer_size = (focused_textbox == 0) ? sizeof(start_addr_buffer) : 
+                                  (focused_textbox == 1) ? sizeof(bytes_per_line_buffer) : sizeof(num_lines_buffer);
+                
+                int len = strlen(buffer);
+                
+                if (len < buffer_size - 1) {
+                    char c = event->text.text[0];
+                    bool valid_char = false;
+                    
+                    // For start address, allow hex characters but prevent multiple 'x'
+                    if (focused_textbox == 0) {
+                        if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+                            valid_char = true;
+                        } else if ((c == 'x' || c == 'X') && len == 1 && buffer[0] == '0') {
+                            // Only allow 'x' as second character after '0'
+                            valid_char = true;
+                        }
+                    } else {
+                        // For other fields, allow only digits
+                        if (c >= '0' && c <= '9') {
+                            valid_char = true;
+                        }
+                    }
+                                        
+                    if (valid_char) {
+                        buffer[len] = c;
+                        buffer[len + 1] = '\0';
+                    }
+                }
+            }
             break;
         case SDL_EVENT_KEY_UP:
-            key_handler(display, event);
-            if (event->key.key == SDLK_ESCAPE) {
-                cpu->running = false;
-            } else if (event->key.key == SDLK_F1) {
-                memory_dump(cpu->memory, 0x0000, 64, 16);
-                printf("Dumping memory\n");
-            } else if (event->key.key == SDLK_SPACE) {
-                run_step_instruction();
+            if (!show_memory_dump_modal) {
+                key_handler(display, event);
+                if (event->key.key == SDLK_ESCAPE) {
+                    cpu->running = false;
+                } else if (event->key.key == SDLK_SPACE) {
+                    run_step_instruction();
+                }
             }
             break;
         case SDL_EVENT_WINDOW_RESIZED:

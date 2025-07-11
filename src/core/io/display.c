@@ -158,8 +158,6 @@ void render_text(display_t* display) {
     }
 }
 
-
-
 // Sprite rendering functions
 void render_sprites(display_t* display) {
     for (int i = 0; i < MAX_SPRITES; i++) {
@@ -184,16 +182,13 @@ void render_sprite_to_buffer(display_t* display, uint8_t id, uint16_t x, uint16_
     uint16_t sprite_data_addr = TILESET_DATA_START + ((id - 1) * 64);
     
     // Track previous valid palette index for this tile
-    uint8_t prev_palette_index = 1; // Default to palette 1
+    uint8_t prev_palette_index = 0; // Default to palette 0
     
     // Render 8x8 sprite using pixel data
     for (int py = 0; py < 8; py++) {
         for (int px = 0; px < 8; px++) {
             // Get palette index for this pixel
             uint8_t palette_index = memory_read_byte(display->memory, sprite_data_addr + (py * 8 + px));
-            
-            // Skip transparent pixels (palette index 0)
-            if (palette_index == 0) continue;
             
             // Use previous valid palette if index is 16+
             if (palette_index >= PALETTE_SIZE) {

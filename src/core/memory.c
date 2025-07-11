@@ -3,13 +3,13 @@
 
 // Memory regions configuration
 static const MemoryRegion memory_regions[REGION_COUNT] = {
-    {USER_ROM_START, USER_ROM_END, true, false, "User ROM"},
-    {RAM_START, RAM_END, false, false, "RAM"},
-    {VIDEO_RAM_START, VIDEO_RAM_END, false, true, "Video Memory"},
-    {AUDIO_REG_START, AUDIO_REG_END, false, true, "Audio Registers"},
-    {INPUT_REG_START, INPUT_REG_END, false, true, "Input Registers"},
-    {SYSTEM_CTRL_START, SYSTEM_CTRL_END, false, true, "System Control"},
-    {SYSCALL_BASE, SYSCALL_END, true, false, "System Calls"},
+    {USER_ROM_START, USER_ROM_END, true, "User ROM"},
+    {RAM_START, RAM_END, false, "RAM"},
+    {VIDEO_RAM_START, VIDEO_RAM_END, true, "Video Memory"},
+    {AUDIO_REG_START, AUDIO_REG_END, true, "Audio Registers"},
+    {INPUT_REG_START, INPUT_REG_END, true, "Input Registers"},
+    {SYSTEM_CTRL_START, SYSTEM_CTRL_END, false, "System Control"},
+    {SYSCALL_BASE, SYSCALL_END, true, "System Calls"},
 };
 
 static bool is_little_endian(void) {
@@ -35,16 +35,9 @@ void memory_init(uint8_t memory[]) {
     // Clear all memory
     memset(memory, 0, MEMORY_SIZE);
     
-    // Initialize system control registers
-    memory[SYSTEM_STATUS_REG] = 0x01; // System running
-    memory[INTERRUPT_CONTROL_REG] = 0x00; // Interrupts disabled initially
-    
     // Initialize video system
     initialize_video_memory(memory);
     initialize_default_palette(memory);
-    
-    // Initialize stack pointer to top of RAM
-    memory_write_word(memory, SYSTEM_CTRL_START + 10, RAM_END, true);
 }
 
 void initialize_video_memory(uint8_t memory[]) {
@@ -70,27 +63,26 @@ void initialize_video_memory(uint8_t memory[]) {
     }
 }
 
+const uint16_t default_colors[16] = {
+    0x0000, // 0 - Black
+    0x000F, // 1 - Dark Blue
+    0x03E0, // 2 - Dark Green  
+    0x03EF, // 3 - Dark Cyan
+    0x7C00, // 4 - Dark Red
+    0x7C0F, // 5 - Dark Magenta
+    0x7FE0, // 6 - Brown/Dark Yellow
+    0x7BEF, // 7 - Light Gray
+    0x39C7, // 8 - Dark Gray
+    0x001F, // 9 - Blue
+    0x07E0, // 10 - Green
+    0x07FF, // 11 - Cyan
+    0xF800, // 12 - Red
+    0xF81F, // 13 - Magenta
+    0xFFE0, // 14 - Yellow
+    0xFFFF, // 15 - White
+};
+
 void initialize_default_palette(uint8_t memory[]) {
-    // 16-color palette (RGB565 format)
-    const uint16_t default_colors[16] = {
-        0x0000, // 0 - Black
-        0x000F, // 1 - Dark Blue
-        0x03E0, // 2 - Dark Green  
-        0x03EF, // 3 - Dark Cyan
-        0x7C00, // 4 - Dark Red
-        0x7C0F, // 5 - Dark Magenta
-        0x7FE0, // 6 - Brown/Dark Yellow
-        0x7BEF, // 7 - Light Gray
-        0x39C7, // 8 - Dark Gray
-        0x001F, // 9 - Blue
-        0x07E0, // 10 - Green
-        0x07FF, // 11 - Cyan
-        0xF800, // 12 - Red
-        0xF81F, // 13 - Magenta
-        0xFFE0, // 14 - Yellow
-        0xFFFF, // 15 - White
-    };
-    
     // Write all 16 colors to palette RAM
     for (int i = 0; i < PALETTE_SIZE; i++) {
         memory_write_word(memory, PALETTE_RAM_START + (i * 2), default_colors[i], true);
@@ -104,7 +96,7 @@ uint8_t memory_read_byte(uint8_t memory[], uint16_t address) {
 
 uint16_t memory_read_word(uint8_t memory[], uint16_t address) {
     if (address == MEMORY_SIZE - 1) {
-        fprintf(stderr, "Error: Attempt to read word from odd address.\n");
+        fprintf(stdout, "Error: Attempt to read word from end of memory.\n");
         return 0;
     }
     uint16_t data;
@@ -119,9 +111,9 @@ uint16_t memory_read_word(uint8_t memory[], uint16_t address) {
 bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data, bool privileged) {
     MemoryRegion_t region_type = memory_get_region(address);
     const MemoryRegion* region = &memory_regions[region_type];
-    if (region->read_only && !privileged) {
-        fprintf(stderr, "Error: Attempt to write byte to read-only memory. REGION: %s\n", region->name);
-        exit(1);
+    if (region->privileged && !privileged) {
+        fprintf(stdout, "Error: Unprivaleged attempt to write byte to privaleged memory. REGION: %s\n", region->name);
+        return false;
     }
     memory[address] = data;
     return true;
@@ -130,14 +122,18 @@ bool memory_write_byte(uint8_t memory[], uint16_t address, uint8_t data, bool pr
 bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data, bool privileged) {
     MemoryRegion_t region_type = memory_get_region(address);
     const MemoryRegion* region = &memory_regions[region_type];
-    if (region->read_only && !privileged) {
-        fprintf(stderr, "Error: Attempt to write word to read-only memory. REGION: %s\n", region->name);
-        exit(1);
+    MemoryRegion_t ahead_region_type = memory_get_region(address+1);
+    const MemoryRegion* ahead_region = &memory_regions[ahead_region_type];
+
+    if (!privileged && (region->privileged || ahead_region-> privileged)) {
+        fprintf(stdout, "Error: Unprivaleged attempt to write word to privaleged memory. REGION: %s\n", (region->privileged ? region->name : ahead_region->name));
+        return false;
     }
     if (address == MEMORY_SIZE - 1) {
-        fprintf(stderr, "Error: Attempt to write word to odd address.\n");
-        exit(1);
+        fprintf(stdout, "Error: Attempt to write word to end of memory.\n");
+        return false;
     }
+
     if (is_little_endian()) {
         memory[address] = (uint8_t)(data & 0x00FF);
         memory[address + 1] = (uint8_t)(data >> 8);
@@ -157,12 +153,12 @@ MemoryRegion_t memory_get_region(uint16_t address) {
     return REGION_COUNT; // Invalid region
 }
 
-void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint16_t chunk_size) {
-    for (int i = 0; i < length; i++) {
-        uint16_t addr = start_address + (i * chunk_size);
+void memory_dump(uint8_t memory[], uint16_t start_addr, uint16_t bytes_per_line, uint16_t num_lines) {
+    for (int line = 0; line < num_lines; line++) {
+        uint16_t addr = start_addr + line * bytes_per_line;
         printf("\n0x%04X:", addr);
-        for (int j = 0; j < chunk_size; j++) {
-            printf(" %02X", memory[addr + (chunk_size - j - 1)]);
+        for (int j = 0; j < bytes_per_line; j++) {
+            printf(" %02X", memory[addr + j]);
         }
     }
     printf("\n");

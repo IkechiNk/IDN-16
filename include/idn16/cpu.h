@@ -121,7 +121,7 @@ void syscall_print_dec(Cpu_t* cpu);
 void syscall_set_sprite(Cpu_t* cpu);
 void syscall_set_palette(Cpu_t* cpu);
 void syscall_move_sprite(Cpu_t* cpu);
-void syscall_set_sprite_pixel(Cpu_t* cpu);
+void syscall_set_tile_pixel(Cpu_t* cpu);
 void syscall_get_frame_count(Cpu_t* cpu);
 void syscall_hide_sprite(Cpu_t* cpu);
 void syscall_get_sprite_pos(Cpu_t* cpu);

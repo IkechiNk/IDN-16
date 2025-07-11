@@ -348,3 +348,26 @@ void emit_pop_pseudo(uint16_t pc, uint8_t reg) {
     // Second instruction: ADDI sp, sp, 2
     emit_imm_format_with_line(pc + 2, 0b01011, 6, 6, 2, 0);  // ADDI r6(sp), r6(sp), 2
 }
+
+void reset_codegen(void) {
+    // Reset all static variables to their initial state
+    symbol_cnt = 0;
+    isnt_cnt = 0;
+    
+    // Clear output array
+    for (int i = 0; i < MAX_INSNS; i++) {
+        output[i] = 0;
+    }
+    
+    // Clear references array
+    for (int i = 0; i < MAX_SYMBOL*2; i++) {
+        refs[i].pc_index = 0;
+        refs[i].name = NULL;
+        refs[i].opcode = 0;
+        refs[i].rd = 0;
+        refs[i].rs1 = 0;
+        refs[i].misc = 0;
+        refs[i].format_type = 0;
+        refs[i].line_num = 0;
+    }
+}

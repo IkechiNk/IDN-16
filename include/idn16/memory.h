@@ -13,10 +13,10 @@
 
 // Memory Map addressing constraints
 #define USER_ROM_START 0x0000
-#define USER_ROM_END 0x7FFF               // 32KB user program ROM (4x larger)
+#define USER_ROM_END 0x7FFF               // 32KB user program ROM
 
 #define RAM_START 0x8000  
-#define RAM_END 0xCFFF                    // 20KB general RAM (consolidated with former stack)
+#define RAM_END 0xCFFF                    // 20KB general RAM (and by extension stack)
 
 // Video Memory Layout
 #define VIDEO_RAM_START 0xD000
@@ -64,8 +64,6 @@
 #define INPUT_CONTROLLER2 (INPUT_REG_START + 1)
 
 // System Control Register Offsets  
-#define SYSTEM_STATUS_REG (SYSTEM_CTRL_START + 0)
-#define INTERRUPT_CONTROL_REG (SYSTEM_CTRL_START + 1)
 #define TIMER_COUNTER_LOW (SYSTEM_CTRL_START + 2)
 #define TIMER_COUNTER_HIGH (SYSTEM_CTRL_START + 3)
 #define FRAME_COUNTER_LOW (SYSTEM_CTRL_START + 6)
@@ -87,10 +85,12 @@ typedef enum {
 typedef struct {
     uint16_t start_address;
     uint16_t end_address;
-    bool read_only;
-    bool memory_mapped_io;
+    bool privileged;
     const char* name;
 } MemoryRegion;
+
+// 16-color palette (RGB565 format)
+extern const uint16_t default_colors[16];
 
 /* 
  * Initializes memory with default values
@@ -111,7 +111,7 @@ bool memory_write_word(uint8_t memory[], uint16_t address, uint16_t data, bool p
  * Memory region management
  */
 MemoryRegion_t memory_get_region(uint16_t address);
-void memory_dump(uint8_t memory[], uint16_t start_address, uint16_t length, uint16_t chunk_size);
+void memory_dump(uint8_t memory[], uint16_t start_addr, uint16_t bytes_per_line, uint16_t num_lines);
 
 /* 
  * System initialization functions
@@ -123,42 +123,42 @@ void initialize_default_tileset(uint8_t memory[]);
 /* 
  * System call definitions - 8x8 font system support
  */
-#define SYSCALL_CLEAR_SCREEN      0xF300    // Clear entire 40x30 text screen
-#define SYSCALL_PUT_CHAR          0xF301    // Put 8x8 character at cursor position
-#define SYSCALL_PUT_STRING        0xF302    // Put string using 8x8 font
-#define SYSCALL_SET_CURSOR        0xF303    // Set text cursor position (x, y)
-#define SYSCALL_GET_CURSOR        0xF304    // Get current cursor position
-#define SYSCALL_PUT_CHAR_AT       0xF305    // Put character at specific position
-#define SYSCALL_SCROLL_UP         0xF306    // Scroll text screen up one line
-#define SYSCALL_FILL_AREA         0xF307    // Fill rectangular area with character
-#define SYSCALL_SET_TEXT_COLOR    0xF308    // Set foreground/background color
-#define SYSCALL_GET_INPUT         0xF309    // Get keyboard input
-#define SYSCALL_PLAY_TONE         0xF30A    // Play audio tone
-#define SYSCALL_MULTIPLY          0xF30B    // 16-bit multiply operation  
-#define SYSCALL_DIVIDE            0xF30C    // 16-bit divide operation
-#define SYSCALL_RANDOM            0xF30D    // Generate random number
-#define SYSCALL_MEMCPY            0xF30E    // Memory copy operation
-#define SYSCALL_PRINT_HEX         0xF30F    // Print number in hexadecimal
-#define SYSCALL_PRINT_DEC         0xF310    // Print number in decimal
-#define SYSCALL_SET_SPRITE        0xF311    // Set sprite position and tile
-#define SYSCALL_SET_PALETTE       0xF312    // Set palette color
-#define SYSCALL_MOVE_SPRITE       0xF313    // Move sprite to new position
-#define SYSCALL_SET_SPRITE_PIXEL  0xF314    // Set individual sprite pixel color
-#define SYSCALL_GET_FRAME_COUNT   0xF315    // Get current frame count
-#define SYSCALL_HIDE_SPRITE       0xF316    // Hide sprite by moving off screen
-#define SYSCALL_GET_SPRITE_POS    0xF317    // Get sprite x,y position
-#define SYSCALL_CLEAR_SPRITE_RANGE 0xF318   // Clear sprite range
-#define SYSCALL_CHECK_COLLISION   0xF319    // Check sprite collision
-#define SYSCALL_SHIFT_SPRITES     0xF31A    // Move multiple sprites
-#define SYSCALL_COPY_SPRITE       0xF31B    // Copy sprite properties
-#define SYSCALL_SET_RETURN_ADDR   0xF31C    // Set return address register to next instruction
-#define SYSCALL_MOVE_SPRITE_RIGHT 0xF31D    // Move sprite right by N tiles
-#define SYSCALL_MOVE_SPRITE_LEFT  0xF31E    // Move sprite left by N tiles
-#define SYSCALL_MOVE_SPRITE_UP    0xF31F    // Move sprite up by N tiles
-#define SYSCALL_MOVE_SPRITE_DOWN  0xF320    // Move sprite down by N tiles
-#define SYSCALL_TIMER_START       0xF321    // Start a timer
-#define SYSCALL_TIMER_QUERY       0xF322    // Query timer status and optionally stop
-#define SYSCALL_SLEEP             0xF323    // Sleep for specified duration
-#define SYSCALL_NUMBER_TO_STRING  0xF324    // Convert number to string in user memory
+#define SYSCALL_CLEAR_SCREEN        0xF300
+#define SYSCALL_PUT_CHAR            0xF301
+#define SYSCALL_PUT_STRING          0xF302
+#define SYSCALL_SET_CURSOR          0xF303
+#define SYSCALL_GET_CURSOR          0xF304
+#define SYSCALL_PUT_CHAR_AT         0xF305
+#define SYSCALL_SCROLL_UP           0xF306
+#define SYSCALL_FILL_AREA           0xF307
+#define SYSCALL_SET_TEXT_COLOR      0xF308
+#define SYSCALL_GET_INPUT           0xF309
+#define SYSCALL_PLAY_TONE           0xF30A
+#define SYSCALL_MULTIPLY            0xF30B
+#define SYSCALL_DIVIDE              0xF30C
+#define SYSCALL_RANDOM              0xF30D
+#define SYSCALL_MEMCPY              0xF30E
+#define SYSCALL_PRINT_HEX           0xF30F
+#define SYSCALL_PRINT_DEC           0xF310
+#define SYSCALL_SET_SPRITE          0xF311
+#define SYSCALL_SET_PALETTE         0xF312
+#define SYSCALL_MOVE_SPRITE         0xF313
+#define SYSCALL_SET_TILE_PIXEL      0xF314
+#define SYSCALL_GET_FRAME_COUNT     0xF315
+#define SYSCALL_HIDE_SPRITE         0xF316
+#define SYSCALL_GET_SPRITE_POS      0xF317
+#define SYSCALL_CLEAR_SPRITE_RANGE  0xF318
+#define SYSCALL_CHECK_COLLISION     0xF319
+#define SYSCALL_SHIFT_SPRITES       0xF31A
+#define SYSCALL_COPY_SPRITE         0xF31B
+#define SYSCALL_SET_RETURN_ADDR     0xF31C
+#define SYSCALL_MOVE_SPRITE_RIGHT   0xF31D
+#define SYSCALL_MOVE_SPRITE_LEFT    0xF31E
+#define SYSCALL_MOVE_SPRITE_UP      0xF31F
+#define SYSCALL_MOVE_SPRITE_DOWN    0xF320
+#define SYSCALL_TIMER_START         0xF321
+#define SYSCALL_TIMER_QUERY         0xF322
+#define SYSCALL_SLEEP               0xF323
+#define SYSCALL_NUMBER_TO_STRING    0xF324
 
 #endif // IDN16_MEMORY_H

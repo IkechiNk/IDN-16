@@ -29,6 +29,9 @@ Cpu_t* cpu_init(void)
     cpu->interrupt_type = 0;
     cpu->sleep_timer = 0;
     cpu->last_time = 0;
+
+    // Set stack pointer to top of ram
+    cpu->r[6] = RAM_END + 1;
     return cpu;
 }
 
@@ -171,7 +174,7 @@ shared jb_decode(uint16_t instruction) {
         break;
     case 0x05:
         i.inst = JSR;
-        i.first = (instruction >> 5) & 0b111; // rs1 field for register containing target
+        i.first = (instruction >> 8) & 0b111; // rd field for register containing target
         break;
     case 0x06:
         i.inst = RET;
@@ -400,8 +403,8 @@ void handle_system_call(uint16_t address, Cpu_t* cpu) {
         case SYSCALL_MOVE_SPRITE:
             syscall_move_sprite(cpu);
             break;
-        case SYSCALL_SET_SPRITE_PIXEL:
-            syscall_set_sprite_pixel(cpu);
+        case SYSCALL_SET_TILE_PIXEL:
+            syscall_set_tile_pixel(cpu);
             break;
         case SYSCALL_GET_FRAME_COUNT:
             syscall_get_frame_count(cpu);

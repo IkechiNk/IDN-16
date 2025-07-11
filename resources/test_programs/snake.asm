@@ -67,7 +67,7 @@ SYSCALL_SLEEP = 0xF323
 SYSCALL_RANDOM = 0xF30D
 SYSCALL_DIVIDE = 0xF30C
 SYSCALL_HIDE_SPRITE	= 0xF316
-SYSCALL_SET_SPRITE_PIXEL = 0xF314
+SYSCALL_SET_TILE_PIXEL_COLOR = 0xF314
 SYSCALL_SET_SPRITE = 0xF311
 SYSCALL_CHECK_COLLISION	= 0xF319
 SYSCALL_PUT_CHAR = 0xF301
@@ -80,10 +80,7 @@ SYSCALL_NUMBER_TO_STRING = 0xF324
 ; MAIN PROGRAM
 ; =============================================================================
 
-start:
-    ; Initialize stack pointer
-    LOAD16 sp, 0xCFFF
-    
+start:    
     ; Initialize game state
     LOAD16 r1, SNAKE_X
     LDI r2, 20
@@ -102,12 +99,12 @@ start:
     STB r2, [r1]
 
 init_graphics:
-    ; Create snake tile (tile 1) - green square
+    ; Create snake head tile (tile 1) - green square
     LDI r1, GREEN_HEAD_TILE
     LDI r2, 0           ; X
     LDI r3, 0           ; Y
     LDI r4, 10          ; Green palette index
-    LOAD16 r5, 0xF314   ; SYSCALL_SET_SPRITE_PIXEL
+    LOAD16 r5, 0xF314   ; SYSCALL_SET_TILE_PIXEL_COLOR
     JSR r5
 
     LDI r1, SNAKE_HEAD_INDEX
@@ -117,12 +114,12 @@ init_graphics:
     LOAD16 r5, SYSCALL_SET_SPRITE
     JSR r5
 
-    ; Create apple tile (tile 2) - red square
+    ; Create apple tile (tile 3) - red square
     LDI r1, RED_APPLE_TILE
     LDI r2, 0          ; X
     LDI r3, 0          ; Y
     LDI r4, 12         ; Red palette index
-    LOAD16 r5, SYSCALL_SET_SPRITE_PIXEL
+    LOAD16 r5, SYSCALL_SET_TILE_PIXEL_COLOR
     JSR r5
     
     LDI r1, APPLE_INDEX
@@ -362,8 +359,7 @@ update_sprites:
 
     ; Update snake head sprite (sprite 0)
     LDI r1, SNAKE_HEAD_INDEX          ; Snake_sprite
-    LOAD16 r4, SNAKE_HEAD_SPRITE
-    LDB r4, [r4+2]          ; SNAKE head tile
+    LDI r4, SNAKE_HEAD_INDEX
     LOAD16 r5, 0xF311       ; SET_SPRITE syscall
     JSR r5
 

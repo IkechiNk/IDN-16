@@ -6,23 +6,23 @@
 
 void syscall_clear_screen(Cpu_t* cpu) {
     // Clear tile buffer with space characters
+    bool success;
     for (int i = 0; i < SCREEN_WIDTH_TILES * SCREEN_HEIGHT_TILES; i++) {
-        memory_write_byte(cpu->memory, CHAR_BUFFER_START + i, 32, true); // 32 = space character
+        success |= memory_write_byte(cpu->memory, CHAR_BUFFER_START + i, 32, true); // 32 = space character
     }
     
     // Reset cursor position
-    memory_write_word(cpu->memory, CURSOR_X_REG, 0, true);
-    memory_write_word(cpu->memory, CURSOR_Y_REG, 0, true);
+    success |= memory_write_word(cpu->memory, CURSOR_X_REG, 0, true);
+    success |= memory_write_word(cpu->memory, CURSOR_Y_REG, 0, true);
     
-    // Return success in r1
-    cpu->r[1] = 1;
+    cpu->r[1] = success;
 }
 
 void syscall_put_char(Cpu_t* cpu) {
     uint8_t character = cpu->r[1] & 0xFF;
     uint16_t cursor_x = memory_read_word(cpu->memory, CURSOR_X_REG);
     uint16_t cursor_y = memory_read_word(cpu->memory, CURSOR_Y_REG);
-    
+    bool success;
     if (character == '\n') {
         // Newline - move to next line
         cursor_x = 0;
@@ -31,7 +31,7 @@ void syscall_put_char(Cpu_t* cpu) {
         // Write character to tile buffer
         if (cursor_x < SCREEN_WIDTH_TILES && cursor_y < SCREEN_HEIGHT_TILES) {
             uint16_t tile_addr = CHAR_BUFFER_START + (cursor_y * SCREEN_WIDTH_TILES) + cursor_x;
-            memory_write_byte(cpu->memory, tile_addr, character, true);
+            success |=  memory_write_byte(cpu->memory, tile_addr, character, true);
             cursor_x++;
         }
     }
@@ -46,10 +46,10 @@ void syscall_put_char(Cpu_t* cpu) {
     }
     
     // Update cursor position
-    memory_write_word(cpu->memory, CURSOR_X_REG, cursor_x, true);
-    memory_write_word(cpu->memory, CURSOR_Y_REG, cursor_y, true);
+    success |= memory_write_word(cpu->memory, CURSOR_X_REG, cursor_x, true);
+    success |= memory_write_word(cpu->memory, CURSOR_Y_REG, cursor_y, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_put_string(Cpu_t* cpu) {
@@ -78,11 +78,11 @@ void syscall_play_tone(Cpu_t* cpu) {
     uint16_t frequency = cpu->r[1];
     uint16_t duration = cpu->r[2];
     
-    // Write to audio registers (simplified)
-    memory_write_word(cpu->memory, AUDIO_REG_START, frequency, true);
-    memory_write_word(cpu->memory, AUDIO_REG_START + 2, duration, true);
+    // Write to audio registers
+    bool success = memory_write_word(cpu->memory, AUDIO_REG_START, frequency, true);
+    success = memory_write_word(cpu->memory, AUDIO_REG_START + 2, duration, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_multiply(Cpu_t* cpu) {
@@ -248,11 +248,11 @@ void syscall_set_sprite(Cpu_t* cpu) {
     }
     
     uint16_t sprite_addr = SPRITE_TABLE_START + (sprite_id * 3);
-    memory_write_byte(cpu->memory, sprite_addr + 0, x, true);
-    memory_write_byte(cpu->memory, sprite_addr + 1, y, true);
-    memory_write_byte(cpu->memory, sprite_addr + 2, tile_id, true);
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 0, x, true);
+    success |= memory_write_byte(cpu->memory, sprite_addr + 1, y, true);
+    success |= memory_write_byte(cpu->memory, sprite_addr + 2, tile_id, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_set_palette(Cpu_t* cpu) {
@@ -265,9 +265,9 @@ void syscall_set_palette(Cpu_t* cpu) {
     }
     
     uint16_t palette_addr = PALETTE_RAM_START + (palette_index * 2);
-    memory_write_word(cpu->memory, palette_addr, color, true);
+    bool success = memory_write_word(cpu->memory, palette_addr, color, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_move_sprite(Cpu_t* cpu) {
@@ -287,13 +287,13 @@ void syscall_move_sprite(Cpu_t* cpu) {
     }
     
     uint16_t sprite_addr = SPRITE_TABLE_START + (sprite_id * 3);
-    memory_write_byte(cpu->memory, sprite_addr + 0, new_x, true);
-    memory_write_byte(cpu->memory, sprite_addr + 1, new_y, true);
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 0, new_x, true);
+    success |= memory_write_byte(cpu->memory, sprite_addr + 1, new_y, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
-void syscall_set_sprite_pixel(Cpu_t* cpu) {
+void syscall_set_tile_pixel(Cpu_t* cpu) {
     uint8_t tile_id = cpu->r[1] & 0xFF;
     uint8_t pixel_x = cpu->r[2] & 0xFF;
     uint8_t pixel_y = cpu->r[3] & 0xFF;
@@ -320,9 +320,9 @@ void syscall_set_sprite_pixel(Cpu_t* cpu) {
     uint16_t pixel_addr = sprite_data_addr + (pixel_y * 8 + pixel_x);
     
     // Set the pixel color (display.c will handle palette index 16+ fallback)
-    memory_write_byte(cpu->memory, pixel_addr, palette_index, true);
+    bool success = memory_write_byte(cpu->memory, pixel_addr, palette_index, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_get_frame_count(Cpu_t* cpu) {
@@ -340,9 +340,9 @@ void syscall_hide_sprite(Cpu_t* cpu) {
     
     // Hide sprite by setting tile_id = 0 (disabled)
     uint16_t sprite_addr = SPRITE_TABLE_START + (sprite_id * 3);
-    memory_write_byte(cpu->memory, sprite_addr + 2, 0, true); // tile_id = 0 (disabled)
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 2, 0, true); // tile_id = 0 (disabled)
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_get_sprite_pos(Cpu_t* cpu) {
@@ -464,12 +464,13 @@ void syscall_copy_sprite(Cpu_t* cpu) {
     
     // Copy all 3 bytes of sprite data (x, y, tile_id)
     // Note: coordinates will be in tile format (0-39, 0-29) as per updated syscalls
+    bool success;
     for (int i = 0; i < 3; i++) {
         uint8_t byte = memory_read_byte(cpu->memory, src_addr + i);
-        memory_write_byte(cpu->memory, dest_addr + i, byte, true);
+        success |= memory_write_byte(cpu->memory, dest_addr + i, byte, true);
     }
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_set_return_addr(Cpu_t* cpu) {
@@ -496,8 +497,8 @@ void syscall_move_sprite_right(Cpu_t* cpu) {
         new_x = SCREEN_WIDTH_TILES - 1; // Clamp to right edge
     }
     
-    memory_write_byte(cpu->memory, sprite_addr + 0, (uint8_t)new_x, true);
-    cpu->r[1] = 1; // Success
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 0, (uint8_t)new_x, true);
+    cpu->r[1] = success;
 }
 
 void syscall_move_sprite_left(Cpu_t* cpu) {
@@ -518,8 +519,8 @@ void syscall_move_sprite_left(Cpu_t* cpu) {
         new_x = 0; // Clamp to left edge
     }
     
-    memory_write_byte(cpu->memory, sprite_addr + 0, (uint8_t)new_x, true);
-    cpu->r[1] = 1; // Success
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 0, (uint8_t)new_x, true);
+    cpu->r[1] = success;
 }
 
 void syscall_move_sprite_up(Cpu_t* cpu) {
@@ -540,8 +541,8 @@ void syscall_move_sprite_up(Cpu_t* cpu) {
         new_y = 0; // Clamp to top edge
     }
     
-    memory_write_byte(cpu->memory, sprite_addr + 1, (uint8_t)new_y, true);
-    cpu->r[1] = 1; // Success
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 1, (uint8_t)new_y, true);
+    cpu->r[1] = success;
 }
 
 void syscall_move_sprite_down(Cpu_t* cpu) {
@@ -562,8 +563,8 @@ void syscall_move_sprite_down(Cpu_t* cpu) {
         new_y = SCREEN_HEIGHT_TILES - 1; // Clamp to bottom edge
     }
     
-    memory_write_byte(cpu->memory, sprite_addr + 1, (uint8_t)new_y, true);
-    cpu->r[1] = 1; // Success
+    bool success = memory_write_byte(cpu->memory, sprite_addr + 1, (uint8_t)new_y, true);
+    cpu->r[1] = success;
 }
 
 void syscall_timer_start(Cpu_t* cpu) {
@@ -574,9 +575,9 @@ void syscall_timer_start(Cpu_t* cpu) {
     cpu->last_time = current_time_ms;
     
     // Store duration in timer registers for reference
-    memory_write_word(cpu->memory, TIMER_COUNTER_LOW, duration, true);
+    bool success = memory_write_word(cpu->memory, TIMER_COUNTER_LOW, duration, true);
     
-    cpu->r[1] = 1; // Success
+    cpu->r[1] = success;
 }
 
 void syscall_timer_query(Cpu_t* cpu) {
@@ -659,11 +660,12 @@ void syscall_number_to_string(Cpu_t* cpu) {
     }
     
     // Copy string to user memory (without privileged access)
+    bool success;
     for (int i = 0; i <= string_length; i++) { // Include null terminator
-        memory_write_byte(cpu->memory, dest_addr + i, temp_buffer[i], false);
+        success |= memory_write_byte(cpu->memory, dest_addr + i, temp_buffer[i], false);
     }
     
     cpu->r[1] = string_length; // Return string length (excluding null terminator)
-    cpu->r[2] = 0; // Success code
+    cpu->r[2] = success; // Success code
 }
 

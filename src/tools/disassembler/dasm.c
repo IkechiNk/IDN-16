@@ -150,9 +150,9 @@ char* disassemble_word(uint16_t word) {
             return result;
         }
         case 0b10101: {
-            // JSR now uses register format: rs1 contains the target address
-            uint8_t rs1 = (word >> 5) & 0x07;
-            sprintf(result, "JSR  r%d\n", rs1); 
+            // JSR uses register format: rd contains the target address
+            uint8_t rd = (word >> 8) & 0x07;
+            sprintf(result, "JSR  r%d\n", rd); 
             pc += 2;
             return result;
         }
