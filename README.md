@@ -53,7 +53,7 @@
 
 `IDN-16` is a 16-bit, simulated console featuring a custom CPU architecture, memory-mapped I/O, and a RISC-V inspired custom instruction set. This serves as a way for me to solidify what I learned about low-level computer architecture, emulation techniques, and graphics programming, while creating something that I find fun and creatively satisfying.
 
-![IDN-16 Console Running Snake Game](img alt="IDN-16 console window displaying the snake game with green snake sprites, red apple, and score display on a dark background")
+![IDN-16 Console Running Snake Game](docs/snake.gif)
 
 ## Getting Started
 
@@ -129,6 +129,41 @@ vim program.asm
 # 4. View → CPU Registers and/or Assembly listings for debugging
 ```
 
+## GUI Interface
+
+The IDN-16 emulator features a comprehensive GUI with menu-driven navigation for all major functions.
+
+### Menu System
+
+**File Menu:**
+- **Open ROM** - Load a binary ROM file (.bin, .rom) into the emulator
+- **Close ROM** - Unload the current ROM and reset the system
+- **Exit** - Close the emulator application
+
+**View Menu:**
+- **CPU Registers** - Toggle real-time display of all 8 CPU registers (r0-r7)
+- **Assembly Listing** - Toggle assembly code view with current instruction highlighting
+
+**Run Menu:**
+- **Start/Resume** - Begin or continue program execution
+- **Pause** - Pause program execution while maintaining state
+- **Step Instruction** - Execute a single instruction for debugging
+- **Reset CPU** - Reset the processor to initial state
+
+**Tools Menu:**
+- **Assembler** - Convert assembly (.asm) files to binary ROM files
+- **Disassembler** - Convert binary ROM files back to readable assembly
+- **Memory Dump** - Interactive tool to examine memory contents
+
+## Keyboard Shortcuts
+
+The emulator supports keyboard shortcuts for quick access to common functions:
+
+| Key | Function |
+|-----|----------|
+| **ESC** | Exit application |
+| **SPACE** | Step single instruction (debugging mode) |
+
 ## Tools
 
 ### Assembler
@@ -142,7 +177,7 @@ The IDN-16 includes an integrated assembler that compiles assembly language prog
 4. Choose where to save the binary output file (`output.bin`)
 5. The assembler will process your code and create the binary
 
-![Assembler in Action](img alt="Terminal showing assembler converting hello.asm to hello.bin with assembly process output and success message")
+![Assembler in Action](docs/hello_assemble.gif)
 
 The assembler is a two-pass system that:
 1. First pass: Collects all labels and their addresses
@@ -192,7 +227,7 @@ idle:
   jmp idle
 ```
 
-![Hello World Output](img alt="IDN-16 console displaying 'HELLO' in white text on black background")
+![Hello World Output](docs/hello_text.jpg)
 
 **Input Detection**
 ```assembly
@@ -243,7 +278,7 @@ idle:
 
 ```
 
-![Math Calculation Result](img alt="IDN-16 console showing the result '50' displayed as decimal text after multiplication calculation")
+![Math Calculation Result](docs/math_text.jpg)
 
 **Simple Sprite**
 ```assembly
@@ -268,7 +303,7 @@ idle:
     JMP idle
 ```
 
-![Simple Yellow Sprite](img alt="IDN-16 console displaying a single yellow 8x8 pixel square sprite centered on the black screen")
+![Simple Yellow Sprite](docs/sprite_yellow.jpg)
 
 **Timer Demo**
 ```assembly
@@ -283,7 +318,7 @@ start:
 idle:
     JMP idle
 ```
-![Timer counting](img alt="IDN-16 console displaying a timer in the top left corner displaying the current number of seconds since the program started")
+![Timer counting](docs/timer_count.gif)
 
 **Memory Access**
 ```assembly
@@ -826,7 +861,7 @@ The IDN-16 includes comprehensive development and debugging tools:
 - ROM loading support for easy program deployment
 - Real-time display of CPU register state and memory contents
 
-![Debug Mode Display](img alt="IDN-16 console showing CPU registers and memory values in real-time overlay")
+![Debug Mode Display](docs/debug.gif)
 
 **Graphics Development:**
 - Tile-based rendering system (40×30 tiles of 8×8 pixels)
@@ -843,8 +878,6 @@ cmake -B build
 cmake --build build
 ctest --test-dir build
 ```
-
-![Test Suite Results](img alt="Terminal showing all unit tests passing with green checkmarks for CPU, memory, assembler, and disassembler tests")
 
 **Individual test components:**
 ```bash
