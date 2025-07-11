@@ -10,7 +10,7 @@ void key_handler(display_t* display, SDL_Event *e) {
     }
     uint8_t cont1 = 0;
     uint8_t cont2 = 0;
-    switch (e->type) {
+    switch (e ? e->type : SDL_EVENT_KEY_DOWN) {
         case SDL_EVENT_KEY_DOWN:
             cont1 |= (keys[SDL_SCANCODE_F]);
             cont1 |= (keys[SDL_SCANCODE_G] << 1);

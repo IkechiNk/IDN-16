@@ -50,6 +50,12 @@ bool display_assembly = false;
 bool cycling = false;
 static int visible_menu = -1;
 
+// Step-over debugging state
+bool stepping_over = false;
+uint16_t step_over_target = 0;
+
+bool is_fullscreen = false;
+
 // Memory dump modal state
 bool show_memory_dump_modal = false;
 char start_addr_buffer[7] = "0x";
@@ -222,6 +228,29 @@ void run_step_instruction() {
         cpu_cycle(cpu);
     }
 }
+
+void run_step_over() {
+    if (!loaded_rom_file) return;
+    
+    // Get current instruction
+    uint16_t instruction = memory_read_word(cpu->memory, cpu->pc);
+    uint8_t opcode = instruction >> 14;
+    
+    // Check if it's a JSR instruction (J-format with type 0x05)
+    if (opcode == 0x02) {  // J-format
+        uint8_t jb_type = (instruction >> 11) & 0b111;
+        if (jb_type == 0x05) {  // JSR
+            // Set up step-over: target is the instruction after JSR
+            step_over_target = cpu->pc + 2;
+            stepping_over = true;
+            cycling = true;  // Start automatic execution
+            return;
+        }
+    }
+    
+    // If not JSR, just do a regular step
+    run_step_instruction();
+}
 void run_reset_cpu() { 
     cycling = false;
     cpu_destroy(cpu);
@@ -310,6 +339,20 @@ void tools_memory_dump() {
     show_memory_dump_modal = true;
     focused_textbox = 0; // Focus on first textbox
     SDL_StartTextInput(window); // Enable text input events
+}
+
+void view_toggle_fullscreen() {
+    is_fullscreen = !is_fullscreen;
+    if (is_fullscreen) {
+        SDL_SetWindowFullscreen(window, true);
+    } else {
+        SDL_SetWindowFullscreen(window, false);
+    }
+}
+
+void debug_goto_address() {
+    // Simple implementation: jump to current PC (can be expanded)
+    printf("Current PC: 0x%04X\n", cpu->pc);
 }
 
 typedef void (*MenuAction)(void);
@@ -660,11 +703,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
 /* This function runs when a new event (mouse input, keypresses, etc) occurs. */
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+    SDL_Keymod mod = SDL_GetModState();
+    bool ctrl_pressed = (mod & SDL_KMOD_CTRL) != 0;
     switch (event->type) {
         case SDL_EVENT_QUIT:
             cpu->running = false;
             break;
-        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_DOWN: {
+
+            
             if (show_memory_dump_modal) {
                 // Handle modal keyboard input
                 if (event->key.key == SDLK_ESCAPE) {
@@ -723,8 +770,55 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
                 }
             } else {
                 key_handler(display, event);
+                
+                // Handle function keys and shortcuts
+                switch (event->key.key) {
+                    case SDLK_F5:
+                        run_start_resume();
+                        break;
+                    case SDLK_F6:
+                        run_pause();
+                        break;
+                    case SDLK_F7:
+                        run_step_instruction();
+                        break;
+                    case SDLK_F8:
+                        run_step_over();
+                        break;
+                    case SDLK_F9:
+                        view_cpu_registers();
+                        break;
+                    case SDLK_F10:
+                        view_assembly_listing();
+                        break;
+                    case SDLK_F11:
+                        tools_memory_dump();
+                        break;
+                    case SDLK_F12:
+                        view_toggle_fullscreen();
+                        break;
+                    case SDLK_O:
+                        if (ctrl_pressed) file_open_rom();
+                        break;
+                    case SDLK_W:
+                        if (ctrl_pressed) file_close_rom();
+                        break;
+                    case SDLK_Q:
+                        if (ctrl_pressed) file_exit();
+                        break;
+                    case SDLK_R:
+                        if (ctrl_pressed) run_reset_cpu();
+                        break;
+                    case SDLK_D:
+                        if (ctrl_pressed) tools_memory_dump();
+                        break;
+                    case SDLK_G:
+                        if (ctrl_pressed) debug_goto_address();
+                        break;
+                }
             }
             break;
+        }
         case SDL_EVENT_TEXT_INPUT:
             if (show_memory_dump_modal && focused_textbox >= 0) {
                 
@@ -811,7 +905,13 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     for (int i = 0; (i < CYCLES_PER_FRAME) && cycling && cpu->running && cpu->sleep_timer == 0; i++) {
         cpu_cycle(cpu);
-
+        key_handler(display, NULL);
+        // Check for step-over completion
+        if (stepping_over && cpu->pc == step_over_target) {
+            stepping_over = false;
+            cycling = false;  // Pause execution
+            printf("Step-over completed at 0x%04X\n", cpu->pc);
+        }
     }
     if (cpu->sleep_timer > 0 && sleep_from == 0) {
         sleep_from = SDL_GetTicks();

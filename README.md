@@ -159,10 +159,37 @@ The IDN-16 emulator features a comprehensive GUI with menu-driven navigation for
 
 The emulator supports keyboard shortcuts for quick access to common functions:
 
+### Execution Control
 | Key | Function |
 |-----|----------|
+| **F5** | Start/Resume execution |
+| **F6** | Pause execution |
+| **F7** | Step single instruction |
+| **F8** | Step over (execute through subroutines) |
+| **SPACE** | Step single instruction (alternative) |
+| **Ctrl+R** | Reset CPU |
+
+### File Operations
+| Key | Function |
+|-----|----------|
+| **Ctrl+O** | Open ROM file |
+| **Ctrl+W** | Close ROM |
+| **Ctrl+Q** | Quit application |
 | **ESC** | Exit application |
-| **SPACE** | Step single instruction (debugging mode) |
+
+### View Controls
+| Key | Function |
+|-----|----------|
+| **F9** | Toggle CPU registers display |
+| **F10** | Toggle assembly listing |
+| **F11** | Toggle memory dump window |
+| **F12** | Toggle fullscreen mode |
+
+### Debug Features
+| Key | Function |
+|-----|----------|
+| **Ctrl+D** | Open memory dump tool |
+| **Ctrl+G** | Go to address (show current PC) |
 
 ## Tools
 
