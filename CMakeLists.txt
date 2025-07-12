@@ -83,6 +83,7 @@ set(CORE_SOURCES
 	src/core/syscalls.c
 	src/core/io/display.c
 	src/core/io/keyboard.c
+	src/core/io/audio.c
 	src/tools/disassembler/dasm.c
 )
 
@@ -115,6 +116,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${FLEX_LIBRARIES}
 	SDL3::SDL3
 	SDL3_ttf::SDL3_ttf
 	SDL3_image::SDL3_image
+	m
 )
 
 # === DISASSEMBLER ===
@@ -188,6 +190,48 @@ add_executable(test_codegen
 target_include_directories(test_codegen PRIVATE include tests/unity)
 add_test(NAME codegen_test COMMAND test_codegen)
 
+# Syscalls tests
+add_executable(test_syscalls
+	tests/core/test_syscalls.c
+	${UNITY_SOURCES}
+	src/core/cpu.c
+	src/core/memory.c
+	src/core/instructions.c
+	src/core/syscalls.c
+	src/tools/disassembler/dasm.c
+)
+target_include_directories(test_syscalls PRIVATE include tests/unity)
+target_link_libraries(test_syscalls PRIVATE SDL3::SDL3)
+add_test(NAME syscalls_test COMMAND test_syscalls)
+
+# Audio tests
+add_executable(test_audio
+	tests/core/test_audio.c
+	${UNITY_SOURCES}
+	src/core/cpu.c
+	src/core/memory.c
+	src/core/instructions.c
+	src/core/syscalls.c
+	src/tools/disassembler/dasm.c
+)
+target_include_directories(test_audio PRIVATE include tests/unity)
+target_link_libraries(test_audio PRIVATE SDL3::SDL3)
+add_test(NAME audio_test COMMAND test_audio)
+
+# Error handling tests
+add_executable(test_error_handling
+	tests/core/test_error_handling.c
+	${UNITY_SOURCES}
+	src/core/cpu.c
+	src/core/memory.c
+	src/core/instructions.c
+	src/core/syscalls.c
+	src/tools/disassembler/dasm.c
+)
+target_include_directories(test_error_handling PRIVATE include tests/unity)
+target_link_libraries(test_error_handling PRIVATE SDL3::SDL3)
+add_test(NAME error_handling_test COMMAND test_error_handling)
+
 # === RESOURCE COPYING ===
 add_custom_command(
 	TARGET ${PROJECT_NAME} POST_BUILD
@@ -199,7 +243,7 @@ add_custom_command(
 
 # === CUSTOM TARGETS ===
 # Build all tools
-add_custom_target(tools DEPENDS idn16-asm idn16-dasm)
+add_custom_target(tools DEPENDS idn16-dasm)
 
 # Build everything
 add_custom_target(all_targets DEPENDS ${PROJECT_NAME} tools)

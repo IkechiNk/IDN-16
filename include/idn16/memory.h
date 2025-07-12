@@ -63,6 +63,30 @@
 #define INPUT_CONTROLLER1 (INPUT_REG_START + 0)
 #define INPUT_CONTROLLER2 (INPUT_REG_START + 1)
 
+// Audio Channel Register Offsets
+#define AUDIO_CH0_FREQ (AUDIO_REG_START + 0x00)
+#define AUDIO_CH0_DURATION (AUDIO_REG_START + 0x02)
+#define AUDIO_CH0_VOLUME (AUDIO_REG_START + 0x04)
+#define AUDIO_CH0_ENABLE (AUDIO_REG_START + 0x05)
+
+#define AUDIO_CH1_FREQ (AUDIO_REG_START + 0x06)
+#define AUDIO_CH1_DURATION (AUDIO_REG_START + 0x08)
+#define AUDIO_CH1_VOLUME (AUDIO_REG_START + 0x0A)
+#define AUDIO_CH1_ENABLE (AUDIO_REG_START + 0x0B)
+
+#define AUDIO_CH2_FREQ (AUDIO_REG_START + 0x0C)
+#define AUDIO_CH2_DURATION (AUDIO_REG_START + 0x0E)
+#define AUDIO_CH2_VOLUME (AUDIO_REG_START + 0x10)
+#define AUDIO_CH2_ENABLE (AUDIO_REG_START + 0x11)
+
+#define AUDIO_CH3_FREQ (AUDIO_REG_START + 0x12)
+#define AUDIO_CH3_DURATION (AUDIO_REG_START + 0x14)
+#define AUDIO_CH3_VOLUME (AUDIO_REG_START + 0x16)
+#define AUDIO_CH3_ENABLE (AUDIO_REG_START + 0x17)
+
+#define AUDIO_MASTER_VOLUME (AUDIO_REG_START + 0x18)
+#define AUDIO_GLOBAL_ENABLE (AUDIO_REG_START + 0x19)
+
 // System Control Register Offsets  
 #define TIMER_COUNTER_LOW (SYSTEM_CTRL_START + 2)
 #define TIMER_COUNTER_HIGH (SYSTEM_CTRL_START + 3)
@@ -119,6 +143,7 @@ void memory_dump(uint8_t memory[], uint16_t start_addr, uint16_t bytes_per_line,
 void initialize_video_memory(uint8_t memory[]);
 void initialize_default_palette(uint8_t memory[]);
 void initialize_default_tileset(uint8_t memory[]);
+void initialize_audio_system(uint8_t memory[]);
 
 /* 
  * System call definitions - 8x8 font system support
@@ -133,7 +158,7 @@ void initialize_default_tileset(uint8_t memory[]);
 #define SYSCALL_FILL_AREA           0xF307
 #define SYSCALL_SET_TEXT_COLOR      0xF308
 #define SYSCALL_GET_INPUT           0xF309
-#define SYSCALL_PLAY_TONE           0xF30A
+#define SYSCALL_PLAY_TONE_CHANNEL   0xF30A
 #define SYSCALL_MULTIPLY            0xF30B
 #define SYSCALL_DIVIDE              0xF30C
 #define SYSCALL_RANDOM              0xF30D
@@ -160,5 +185,8 @@ void initialize_default_tileset(uint8_t memory[]);
 #define SYSCALL_TIMER_QUERY         0xF322
 #define SYSCALL_SLEEP               0xF323
 #define SYSCALL_NUMBER_TO_STRING    0xF324
+#define SYSCALL_STOP_CHANNEL        0xF325
+#define SYSCALL_SET_MASTER_VOLUME   0xF326
+#define SYSCALL_STOP_ALL_AUDIO      0xF327
 
 #endif // IDN16_MEMORY_H

@@ -7,6 +7,13 @@
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installing](#installing)
+  - [GUI Interface](#gui-interface)
+    - [Menu System](#menu-system)
+  - [Keyboard Shortcuts](#keyboard-shortcuts)
+    - [Execution Control](#execution-control)
+    - [File Operations](#file-operations)
+    - [View Controls](#view-controls)
+    - [Debug Features](#debug-features)
   - [Tools](#tools)
     - [Assembler](#assembler)
     - [Disassembler](#disassembler)
@@ -79,7 +86,7 @@ sudo apt install build-essential cmake git
 
 **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/IDN-16.git
+git clone https://github.com/IkechiNk/IDN-16.git
 cd IDN-16
 ```
 
@@ -336,16 +343,103 @@ idle:
 ```assembly
 ; Display the number of seconds passed since program start
 start:
-    LDI r1, 2000            ; 2000ms = 2 seconds
+    LDI r3, 0               ; r3 = elapsed seconds counter
+    JSR r1
+    
+timer_loop:
+    LDI r1, 1000            ; 1000ms = 1 second
     LOAD16 r2, 0xF323       ; SLEEP syscall
     JSR r2
-    LDI r1, 'D'             ; Display "DONE"
-    LOAD16 r2, 0xF301       ; PUT_CHAR
+    
+    INC r3                  ; Increment elapsed seconds
+    
+    ; Reset cursor to (0,0)
+    LDI r1, 0               ; X = 0
+    LDI r2, 0               ; Y = 0
+    LOAD16 r4, 0xF303       ; SET_CURSOR syscall
+    JSR r4
+    
+    ; Display elapsed seconds
+    MOV r1, r3              ; Move seconds count to r1
+    LOAD16 r2, 0xF310       ; PRINT_DEC syscall
     JSR r2
-idle:
-    JMP idle
+    
+    JMP timer_loop          ; Repeat
 ```
 ![Timer counting](docs/timer_count.gif)
+
+**Audio Input Demo**
+```assembly
+; Play a sound when player 1 presses button A (F key)
+start:
+    LOAD16 r1, 0xF300       ; Clear screen initially
+    JSR r1
+    
+    ; Display instructions
+    LDI r1, 'P'
+    LOAD16 r2, 0xF301       ; PUT_CHAR
+    JSR r2
+    LDI r1, 'r'
+    JSR r2
+    LDI r1, 'e'
+    JSR r2
+    LDI r1, 's'
+    JSR r2
+    LDI r1, 's'
+    JSR r2
+    LDI r1, ' '
+    JSR r2
+    LDI r1, 'F'
+    JSR r2
+
+input_loop:
+    ; Get controller 1 input
+    LDI r1, 0               ; Controller 0 (Player 1)
+    LOAD16 r2, 0xF309       ; GET_INPUT syscall
+    JSR r2
+    
+    ; Check if button A (F key) is pressed (bit 0)
+    LDI r2, 1               ; Mask for bit 0 (button A)
+    AND r3, r1, r2          ; Check if bit 0 is set
+    CMP r3, r0              ; Compare with 0
+    JEQ input_loop          ; If not pressed, keep checking
+play_sound:
+    ; Start sound on channel 1 with long duration
+    LDI r1, 1                   ; Channel 1 (sound effects)
+    LOAD16 r2, 523              ; 523Hz frequency (C5 note)
+    LOAD16 r3, 100             ; 100ms duration (long enough for sustained play)
+    LOAD16 r4, 50               ; Volume 50
+    LOAD16 r5, 0xF30A           ; PLAY_TONE_CHANNEL syscall
+    JSR r5
+    
+    ; Keep playing while button is held
+hold_loop:
+    LDI r1, 0               ; Controller 0
+    LOAD16 r2, 0xF309       ; GET_INPUT syscall
+    JSR r2
+    LDI r2, 1               ; Mask for bit 0
+    AND r3, r1, r2          ; Check if still pressed
+    JEQ stop_sound          ; If not pressed, stop sound
+    
+    ; Button still pressed - restart sound to keep it playing
+    LDI r1, 1                   ; Channel 1 (sound effects)
+    LOAD16 r2, 523              ; 523Hz frequency (C5 note)
+    LOAD16 r3, 100             ; 100ms duration
+    LOAD16 r4, 50               ; Volume 50
+    LOAD16 r5, 0xF30A           ; PLAY_TONE_CHANNEL syscall
+    JSR r5
+    
+    JMP hold_loop           ; Continue checking
+    
+stop_sound:
+    ; Stop channel 1
+    LDI r1, 1               ; Channel 1
+    LOAD16 r2, 0xF30B       ; STOP_CHANNEL syscall
+    JSR r2
+    
+    JMP input_loop          ; Continue checking for input
+
+```
 
 **Memory Access**
 ```assembly
@@ -398,7 +492,36 @@ The video system uses a tile-based architecture with the following sub-regions:
 The IDN-16 uses memory-mapped I/O for interfacing with hardware systems:
 
 #### Audio System (0xF000-0xF0FF)
-Audio processing and sound generation registers (256 bytes available for audio channels, waveform control, and effects).
+Multi-channel audio processing and sound generation registers:
+
+**Channel 0 (Background Music/Melody):**
+- **0xF000-0xF001**: Channel 0 Frequency (Hz)
+- **0xF002-0xF003**: Channel 0 Duration (ms)
+- **0xF004**: Channel 0 Volume (0-255)
+- **0xF005**: Channel 0 Enable (0=off, 1=on)
+
+**Channel 1 (Sound Effects):**
+- **0xF006-0xF007**: Channel 1 Frequency (Hz)
+- **0xF008-0xF009**: Channel 1 Duration (ms)
+- **0xF00A**: Channel 1 Volume (0-255)
+- **0xF00B**: Channel 1 Enable (0=off, 1=on)
+
+**Channel 2 (Ambient Sounds):**
+- **0xF00C-0xF00D**: Channel 2 Frequency (Hz)
+- **0xF00E-0xF00F**: Channel 2 Duration (ms)
+- **0xF010**: Channel 2 Volume (0-255)
+- **0xF011**: Channel 2 Enable (0=off, 1=on)
+
+**Channel 3 (UI/Menu Sounds):**
+- **0xF012-0xF013**: Channel 3 Frequency (Hz)
+- **0xF014-0xF015**: Channel 3 Duration (ms)
+- **0xF016**: Channel 3 Volume (0-255)
+- **0xF017**: Channel 3 Enable (0=off, 1=on)
+
+**Global Audio Control:**
+- **0xF018**: Master Volume (0-255)
+- **0xF019**: Audio Enable (0=all channels off, 1=on)
+- **0xF01A-0xF0FF**: Reserved for future audio features (230 bytes)
 
 #### Input System (0xF100-0xF1FF)
 **0xF100**: Controller 1 button state (read-only)
@@ -448,13 +571,6 @@ The IDN-16 uses a **dual-mode graphics system**:
 
 **Text operations** use system calls and work like a traditional console.
 **Sprite operations** require direct memory manipulation for maximum performance.
-
-**Performance Specifications:**
-- **CPU Clock Speed**: 1 MHz (1,000,000 Hz)
-- **Display Refresh Rate**: 240 Hz
-- **Cycles per Frame**: ~4,167 cycles (at 1 MHz / 240 Hz)
-- **Memory Bus Width**: 16-bit
-- **Address Space**: 64KB (16-bit addressing)
 
 ### System Call Functions
 System calls handle text output, input, audio, math, sprite animation, and utility functions. These are accessed via specific memory addresses in the 0xF300-0xFFFF range. The IDN-16 now includes **35 total system calls** with enhanced sprite animation capabilities for game development.
@@ -518,7 +634,10 @@ System calls handle text output, input, audio, math, sprite animation, and utili
 #### Audio Functions
 | Function            | Address | Inputs | Outputs | Description |
 |-------------------- | ------- | ------ | ------- | ----------- |
-| SYSCALL_PLAY_TONE   | 0xF30A  | r1=freq, r2=duration | r1=success(1/0) | Play audio tone |
+| SYSCALL_PLAY_TONE_CHANNEL | 0xF30A | r1=channel(0-3), r2=freq, r3=duration, r4=volume | r1=success(1/0) | Play audio tone on specific channel |
+| SYSCALL_STOP_CHANNEL | 0xF325 | r1=channel(0-3) | r1=success(1/0) | Stop audio playback on specific channel |
+| SYSCALL_SET_MASTER_VOLUME | 0xF326 | r1=volume(0-255) | r1=success(1/0) | Set master audio volume |
+| SYSCALL_STOP_ALL_AUDIO | 0xF327 | - | r1=success(1/0) | Stop all audio channels |
 
 
 **Usage Examples:**
@@ -585,36 +704,6 @@ helper_function:
     RET
 ```
 
-**Number to String Conversion Example:**
-```assembly
-; Convert a number to decimal string in user memory
-number_to_string_example:
-    LDI r1, 1234            ; Number to convert
-    LOAD16 r2, 0x8000       ; Destination address in user memory
-    LDI r3, 10              ; Buffer size (10 bytes)
-    LDI r4, 10              ; Base 10 (decimal)
-    LOAD16 r5, 0xF324       ; SYSCALL_NUMBER_TO_STRING
-    JSR r5                  ; r1 = string length, r2 = error code
-    
-    ; Check for success
-    CMP r2, r0              ; Check if r2 = 0 (success)
-    JNE conversion_error    ; Jump if error occurred
-    
-    ; Display the converted string
-    LOAD16 r1, 0x8000       ; String address
-    MOV r2, r1              ; String length (from previous call)
-    LOAD16 r3, 0xF302       ; SYSCALL_PUT_STRING
-    JSR r3                  ; Display the string
-    JMP conversion_done
-    
-conversion_error:
-    ; Handle error (r2 contains error code: 1=invalid base, 2=buffer too small, 3=result too long)
-    ; Display error message...
-    
-conversion_done:
-    ; Continue with program...
-```
-
 ### Sprite System (Direct Memory Access)
 
 Sprites are controlled by writing directly to video memory regions:
@@ -645,11 +734,7 @@ STW r2, [r1+0]                 ; Write to palette
 ; Create red tile data (tile 0)
 LOAD16 r1, TILESET_DATA_START  ; Tile 0 base address
 LDI r2, 1                      ; Palette index 1 (red)
-STB r2, [r1+0]                 ; Pixel (0,0)
-STB r2, [r1+1]                 ; Pixel (1,0)
-STB r2, [r1+8]                 ; Pixel (0,1) - next row
-STB r2, [r1+9]                 ; Pixel (1,1)
-; ... continue for 8x8 pixels
+STB r2, [r1+0]                 ; Pixel (0,0), the rest is filled
 
 ; Set up sprite 0 in sprite table
 LOAD16 r1, SPRITE_TABLE_START  ; Sprite table base

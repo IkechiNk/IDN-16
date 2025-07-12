@@ -38,6 +38,9 @@ void memory_init(uint8_t memory[]) {
     // Initialize video system
     initialize_video_memory(memory);
     initialize_default_palette(memory);
+    
+    // Initialize audio system
+    initialize_audio_system(memory);
 }
 
 void initialize_video_memory(uint8_t memory[]) {
@@ -86,6 +89,23 @@ void initialize_default_palette(uint8_t memory[]) {
     // Write all 16 colors to palette RAM
     for (int i = 0; i < PALETTE_SIZE; i++) {
         memory_write_word(memory, PALETTE_RAM_START + (i * 2), default_colors[i], true);
+    }
+}
+
+void initialize_audio_system(uint8_t memory[]) {
+    // Enable global audio by default
+    memory_write_byte(memory, AUDIO_GLOBAL_ENABLE, 1, true);
+    
+    // Set default master volume (mid-level)
+    memory_write_byte(memory, AUDIO_MASTER_VOLUME, 128, true);
+    
+    // Clear all channel registers (they start disabled)
+    for (int ch = 0; ch < 4; ch++) {
+        uint16_t ch_base = AUDIO_REG_START + (ch * 6);
+        memory_write_word(memory, ch_base, 0, true);         // Frequency = 0
+        memory_write_word(memory, ch_base + 2, 0, true);     // Duration = 0  
+        memory_write_byte(memory, ch_base + 4, 0, true);     // Volume = 0
+        memory_write_byte(memory, ch_base + 5, 0, true);     // Enabled = false
     }
 }
 

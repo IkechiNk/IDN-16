@@ -5,8 +5,10 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <stdio.h>
+#include <math.h>
 #include "idn16/io/display.h"
 #include "idn16/io/keyboard.h"
+#include "idn16/io/audio.h"
 #include "idn16/cpu.h"
 #include "idn16/dasm.h"
 #include "idn16/asmblr.h"
@@ -56,6 +58,7 @@ uint16_t step_over_target = 0;
 
 bool is_fullscreen = false;
 
+
 // Memory dump modal state
 bool show_memory_dump_modal = false;
 char start_addr_buffer[7] = "0x";
@@ -79,6 +82,8 @@ static bool is_wsl() {
     fclose(f);
     return strstr(buf, "Microsoft") != NULL || strstr(buf, "WSL") != NULL;
 }
+
+
 
 /* Clay layout definitions */
 Clay_Sizing Layout_Expand = {
@@ -255,6 +260,7 @@ void run_reset_cpu() {
     cycling = false;
     cpu_destroy(cpu);
     display_destroy(display);
+    audio_destroy();
     
     /* Initialize the cpu */
     cpu = cpu_init();
@@ -269,7 +275,7 @@ void run_reset_cpu() {
         exit(1);
     }
     if (loaded_rom_file) load_user_rom(cpu->memory, loaded_rom_file);
-
+    audio_init(cpu->memory);
 }
 
 void tools_assembler() { 
@@ -642,6 +648,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         printf("WSL detected: Forcing SDL software renderer\n");
     }
     
+    /* Initialize SDL with video and audio subsystems */
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+        SDL_Log("Couldn't initialize SDL: %s\n", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    
     /* Create the window */
     if (!SDL_CreateWindowAndRenderer("IDN-16 Virtual Console", ScreenWidth, ScreenHeight, 0, &window, &renderer)) {
         SDL_Log("Couldn't create window and renderer: %s\n", SDL_GetError());
@@ -697,6 +709,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     renderer_data->textEngine = text_engine;
     renderer_data->fonts = fonts;
     renderer_data->renderer = renderer;
+
+    /* Initialize Audio */
+    audio_init(cpu->memory);
 
     return SDL_APP_CONTINUE;
 }
@@ -902,6 +917,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     SDL_RenderPresent(renderer);
 
+    // Update audio system
+    audio_update(cpu->memory);
 
     for (int i = 0; (i < CYCLES_PER_FRAME) && cycling && cpu->running && cpu->sleep_timer == 0; i++) {
         cpu_cycle(cpu);
@@ -945,5 +962,6 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     if (text_engine) TTF_DestroyRendererTextEngine(text_engine);
     if (clay_mem) free(clay_mem);
     if (renderer_data) free(renderer_data);
+    audio_destroy();
     TTF_Quit();
 }

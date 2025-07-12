@@ -74,13 +74,64 @@ void syscall_get_input(Cpu_t* cpu) {
     cpu->r[1] = input;
 }
 
-void syscall_play_tone(Cpu_t* cpu) {
-    uint16_t frequency = cpu->r[1];
-    uint16_t duration = cpu->r[2];
+void syscall_play_tone_channel(Cpu_t* cpu) {
+    uint16_t channel = cpu->r[1];
+    uint16_t frequency = cpu->r[2];
+    uint16_t duration = cpu->r[3];
+    uint16_t volume = cpu->r[4];
     
-    // Write to audio registers
-    bool success = memory_write_word(cpu->memory, AUDIO_REG_START, frequency, true);
-    success = memory_write_word(cpu->memory, AUDIO_REG_START + 2, duration, true);
+    if (channel > 3) {
+        cpu->r[1] = 0; // Invalid channel
+        return;
+    }
+    
+    // Calculate channel base address
+    uint16_t ch_base = AUDIO_REG_START + (channel * 6);
+    
+    // Write to channel registers
+    bool success = memory_write_word(cpu->memory, ch_base, frequency, true);
+    success &= memory_write_word(cpu->memory, ch_base + 2, duration, true);
+    success &= memory_write_byte(cpu->memory, ch_base + 4, volume & 0xFF, true);
+    success &= memory_write_byte(cpu->memory, ch_base + 5, 1, true); // Enable channel
+    
+    cpu->r[1] = success;
+}
+
+void syscall_stop_channel(Cpu_t* cpu) {
+    uint16_t channel = cpu->r[1];
+    
+    if (channel > 3) {
+        cpu->r[1] = 0; // Invalid channel
+        return;
+    }
+    
+    // Calculate channel base address and disable
+    uint16_t ch_base = AUDIO_REG_START + (channel * 6);
+    bool success = memory_write_byte(cpu->memory, ch_base + 5, 0, true); // Disable channel
+    
+    cpu->r[1] = success;
+}
+
+void syscall_set_master_volume(Cpu_t* cpu) {
+    uint16_t volume = cpu->r[1];
+    
+    // Write to master volume register
+    bool success = memory_write_byte(cpu->memory, AUDIO_MASTER_VOLUME, volume & 0xFF, true);
+    
+    cpu->r[1] = success;
+}
+
+void syscall_stop_all_audio(Cpu_t* cpu) {
+    bool success = true;
+    
+    // Disable all channels
+    for (int channel = 0; channel < 4; channel++) {
+        uint16_t ch_base = AUDIO_REG_START + (channel * 6);
+        success &= memory_write_byte(cpu->memory, ch_base + 5, 0, true); // Disable channel
+    }
+    
+    // Disable global audio
+    success &= memory_write_byte(cpu->memory, AUDIO_GLOBAL_ENABLE, 0, true);
     
     cpu->r[1] = success;
 }

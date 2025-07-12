@@ -373,8 +373,8 @@ void handle_system_call(uint16_t address, Cpu_t* cpu) {
         case SYSCALL_GET_INPUT:
             syscall_get_input(cpu);
             break;
-        case SYSCALL_PLAY_TONE:
-            syscall_play_tone(cpu);
+        case SYSCALL_PLAY_TONE_CHANNEL:
+            syscall_play_tone_channel(cpu);
             break;
         case SYSCALL_MULTIPLY:
             syscall_multiply(cpu);
@@ -453,6 +453,15 @@ void handle_system_call(uint16_t address, Cpu_t* cpu) {
             break;
         case SYSCALL_NUMBER_TO_STRING:
             syscall_number_to_string(cpu);
+            break;
+        case SYSCALL_STOP_CHANNEL:
+            syscall_stop_channel(cpu);
+            break;
+        case SYSCALL_SET_MASTER_VOLUME:
+            syscall_set_master_volume(cpu);
+            break;
+        case SYSCALL_STOP_ALL_AUDIO:
+            syscall_stop_all_audio(cpu);
             break;
         default:
             printf("Unknown system call: 0x%04X\n", address);

@@ -34,10 +34,10 @@ void test_memory_write_and_read_word(void) {
     TEST_ASSERT_TRUE(memory_write_word(test_memory, RAM_START, 0xBEEF, false));
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, memory_read_word(test_memory, RAM_START));
     
-    TEST_ASSERT_TRUE(memory_write_word(test_memory, RAM_END - 2, 0xBEEF, false));
-    TEST_ASSERT_EQUAL_HEX16(0xBEEF, memory_read_word(test_memory, RAM_END - 2));
+    TEST_ASSERT_TRUE(memory_write_word(test_memory, VIDEO_RAM_END - 2, 0xBEEF, false));
+    TEST_ASSERT_EQUAL_HEX16(0xBEEF, memory_read_word(test_memory, VIDEO_RAM_END - 2));
     
-    TEST_ASSERT_FALSE(memory_write_word(test_memory, RAM_END, 0xBEEF, false));
+    TEST_ASSERT_FALSE(memory_write_word(test_memory, VIDEO_RAM_END, 0xBEEF, false));
 }
 
 void test_memory_basic_operations(void) {
