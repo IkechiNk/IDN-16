@@ -16,6 +16,7 @@
     - [Debug Features](#debug-features)
   - [Tools](#tools)
     - [Assembler](#assembler)
+      - [Technical Architecture](#technical-architecture)
     - [Disassembler](#disassembler)
     - [Example Programs](#example-programs)
   - [Documentation](#documentation)
@@ -202,7 +203,7 @@ The emulator supports keyboard shortcuts for quick access to common functions:
 
 ### Assembler
 
-The IDN-16 includes an integrated assembler that compiles assembly language programs into binary machine code for the IDN-16 console.
+The IDN-16 includes a sophisticated assembler built using industry-standard compiler construction tools (Flex and Bison) that compiles assembly language programs into binary machine code for the IDN-16 console.
 
 **Usage:**
 1. Start the IDN-16 emulator: `./build/idn16`
@@ -213,9 +214,64 @@ The IDN-16 includes an integrated assembler that compiles assembly language prog
 
 ![Assembler in Action](docs/hello_assemble.gif)
 
-The assembler is a two-pass system that:
-1. First pass: Collects all labels and their addresses
-2. Second pass: Generates binary code with resolved label references
+#### Technical Architecture
+
+**Lexical Analysis (Flex)**
+- **File**: `src/tools/assembler/lexer.l`
+- Tokenizes assembly source code using Flex lexical analyzer
+- Supports case-insensitive instruction mnemonics (ADD/add, MOV/mov, etc.)
+- Recognizes multiple immediate value formats: decimal, hexadecimal (0x), binary (0b), character literals ('c')
+- Automatic program counter tracking during tokenization
+- Intelligent immediate value classification (IMM5, IMM8, OFFSET, IMM16) based on value ranges
+- Comprehensive error reporting with token information and line numbers
+
+**Syntax Analysis (Bison)**
+- **File**: `src/tools/assembler/parser.y`
+- Defines formal grammar for IDN-16 assembly language syntax
+- Handles all instruction formats: REG, IMM, JB (Jump/Branch), and SP (Special)
+- Supports pseudo-instructions and macro expansions (LOAD16, PUSH, POP)
+- Semantic actions trigger code generation during parsing
+- Built-in syntax error recovery and detailed error messages
+
+**Symbol Table Management**
+- **File**: `src/tools/assembler/symbol_table.c`
+- Dynamic symbol storage supporting up to 8,192 symbols
+- Efficient binary search implementation using qsort/bsearch algorithms
+- Dual symbol types: labels (type 0) and constants/variables (type 1)
+- Automatic memory management with proper cleanup routines
+- Forward reference resolution for undefined symbols
+
+**Code Generation Engine**
+- **File**: `src/tools/assembler/codegen.c`
+- Modular instruction encoding for different format types
+- Immediate value validation with format-specific range checking
+- Forward reference tracking system for unresolved identifiers
+- Pseudo-instruction expansion:
+  - `LOAD16 reg, imm16` → `LDI reg, low_byte; LUI reg, high_byte`
+  - `PUSH reg` → `ADDI sp, sp, -2; STW reg, [sp]`
+  - `POP reg` → `LDW reg, [sp]; ADDI sp, sp, 2`
+- Binary output generation with efficient memory layout
+
+**Two-Pass Assembly Process**
+1. **First Pass (Parsing)**: 
+   - Lexical analysis tokenizes source code
+   - Parser builds intermediate representation
+   - Symbol table populated with labels and constants
+   - Forward references recorded for later resolution
+   - Program counter tracking for address calculation
+
+2. **Second Pass (Finalization)**:
+   - Symbol table sorted for efficient binary search
+   - Forward references resolved using symbol lookup
+   - Final machine code generation with resolved addresses
+   - Binary output file creation
+
+**Advanced Features**
+- **Range Validation**: Immediate values validated against instruction-specific constraints
+- **Memory Efficiency**: Compact 16-bit instruction encoding
+- **Error Handling**: Comprehensive error reporting with line numbers and context
+- **Macro Support**: Complex pseudo-instructions expanded into multiple machine instructions
+- **Format Support**: Handles all IDN-16 instruction formats with proper bit field encoding
 
 ### Disassembler
 
