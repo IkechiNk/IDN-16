@@ -1,6 +1,5 @@
 # `IDN-16` Console
 ## Table of Contents
-<!-- NOTE: WHEN GETTING "{lib}.dll" is not a .so shared library, this problem is becuase cmake is returning the windows path to the libary.-->
 - [`IDN-16` Console](#idn-16-console)
   - [Table of Contents](#table-of-contents)
   - [About](#about)
@@ -96,6 +95,7 @@ cd IDN-16
 cmake -B build
 cmake --build build
 ```
+NOTE: WHEN GETTING "{lib}.dll" is not a .so shared library, this problem occurs becuase cmake is returning the windows path to the libary (usually on the WSL subsystem). A temporary fix for this would be to disable [interop in wsl.conf](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#example-wslconf-file).
 
 This will build the main IDN-16 emulator with integrated assembler and disassembler tools.
 
