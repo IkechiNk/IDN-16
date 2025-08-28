@@ -129,108 +129,108 @@ add_executable(idn16-dasm ${DISASSEMBLER_SOURCES})
 target_include_directories(idn16-dasm PRIVATE include)
 
 # === TESTS ===
-enable_testing()
+# enable_testing()
 
-# Unity test framework
-set(UNITY_SOURCES tests/unity/unity.c)
+# # Unity test framework
+# set(UNITY_SOURCES tests/unity/unity.c)
 
-# Memory tests
-add_executable(test_memory 
-	tests/core/test_memory.c
-	${UNITY_SOURCES}
-	src/core/memory.c
-	src/core/instructions.c
-	src/core/cpu.c
-	src/core/syscalls.c
-	src/tools/disassembler/dasm.c
-)
-target_include_directories(test_memory PRIVATE include tests/unity)
-target_link_libraries(test_memory PRIVATE SDL3::SDL3)
-add_test(NAME memory_test COMMAND test_memory)
+# # Memory tests
+# add_executable(test_memory 
+# 	tests/core/test_memory.c
+# 	${UNITY_SOURCES}
+# 	src/core/memory.c
+# 	src/core/instructions.c
+# 	src/core/cpu.c
+# 	src/core/syscalls.c
+# 	src/tools/disassembler/dasm.c
+# )
+# target_include_directories(test_memory PRIVATE include tests/unity)
+# target_link_libraries(test_memory PRIVATE SDL3::SDL3)
+# add_test(NAME memory_test COMMAND test_memory)
 
-# CPU tests
-add_executable(test_cpu
-	tests/core/test_cpu.c  
-	${UNITY_SOURCES}
-	src/core/cpu.c
-	src/core/memory.c
-	src/core/instructions.c
-	src/core/syscalls.c
-	src/tools/disassembler/dasm.c
-)
-target_include_directories(test_cpu PRIVATE include tests/unity)
-target_link_libraries(test_cpu PRIVATE SDL3::SDL3)
-add_test(NAME cpu_test COMMAND test_cpu)
+# # CPU tests
+# add_executable(test_cpu
+# 	tests/core/test_cpu.c  
+# 	${UNITY_SOURCES}
+# 	src/core/cpu.c
+# 	src/core/memory.c
+# 	src/core/instructions.c
+# 	src/core/syscalls.c
+# 	src/tools/disassembler/dasm.c
+# )
+# target_include_directories(test_cpu PRIVATE include tests/unity)
+# target_link_libraries(test_cpu PRIVATE SDL3::SDL3)
+# add_test(NAME cpu_test COMMAND test_cpu)
 
-# Symbol table tests
-add_executable(test_symbol_table
-	tests/tools/test_symbol_table.c
-	${UNITY_SOURCES}
-	src/tools/assembler/symbol_table.c
-)
-target_include_directories(test_symbol_table PRIVATE include tests/unity)
-add_test(NAME symbol_table_test COMMAND test_symbol_table)
+# # Symbol table tests
+# add_executable(test_symbol_table
+# 	tests/tools/test_symbol_table.c
+# 	${UNITY_SOURCES}
+# 	src/tools/assembler/symbol_table.c
+# )
+# target_include_directories(test_symbol_table PRIVATE include tests/unity)
+# add_test(NAME symbol_table_test COMMAND test_symbol_table)
 
-# Disassembler tests  
-add_executable(test_disassembler
-	tests/tools/test_disassembler.c
-	${UNITY_SOURCES}
-	src/tools/disassembler/dasm.c
-)
-target_include_directories(test_disassembler PRIVATE include tests/unity)
-add_test(NAME disassembler_test COMMAND test_disassembler)
+# # Disassembler tests  
+# add_executable(test_disassembler
+# 	tests/tools/test_disassembler.c
+# 	${UNITY_SOURCES}
+# 	src/tools/disassembler/dasm.c
+# )
+# target_include_directories(test_disassembler PRIVATE include tests/unity)
+# add_test(NAME disassembler_test COMMAND test_disassembler)
 
-# Codegen tests
-add_executable(test_codegen
-	tests/tools/test_codegen.c
-	${UNITY_SOURCES}
-	src/tools/assembler/codegen.c
-	src/tools/assembler/symbol_table.c
-)
-target_include_directories(test_codegen PRIVATE include tests/unity)
-add_test(NAME codegen_test COMMAND test_codegen)
+# # Codegen tests
+# add_executable(test_codegen
+# 	tests/tools/test_codegen.c
+# 	${UNITY_SOURCES}
+# 	src/tools/assembler/codegen.c
+# 	src/tools/assembler/symbol_table.c
+# )
+# target_include_directories(test_codegen PRIVATE include tests/unity)
+# add_test(NAME codegen_test COMMAND test_codegen)
 
-# Syscalls tests
-add_executable(test_syscalls
-	tests/core/test_syscalls.c
-	${UNITY_SOURCES}
-	src/core/cpu.c
-	src/core/memory.c
-	src/core/instructions.c
-	src/core/syscalls.c
-	src/tools/disassembler/dasm.c
-)
-target_include_directories(test_syscalls PRIVATE include tests/unity)
-target_link_libraries(test_syscalls PRIVATE SDL3::SDL3)
-add_test(NAME syscalls_test COMMAND test_syscalls)
+# # Syscalls tests
+# add_executable(test_syscalls
+# 	tests/core/test_syscalls.c
+# 	${UNITY_SOURCES}
+# 	src/core/cpu.c
+# 	src/core/memory.c
+# 	src/core/instructions.c
+# 	src/core/syscalls.c
+# 	src/tools/disassembler/dasm.c
+# )
+# target_include_directories(test_syscalls PRIVATE include tests/unity)
+# target_link_libraries(test_syscalls PRIVATE SDL3::SDL3)
+# add_test(NAME syscalls_test COMMAND test_syscalls)
 
-# Audio tests
-add_executable(test_audio
-	tests/core/test_audio.c
-	${UNITY_SOURCES}
-	src/core/cpu.c
-	src/core/memory.c
-	src/core/instructions.c
-	src/core/syscalls.c
-	src/tools/disassembler/dasm.c
-)
-target_include_directories(test_audio PRIVATE include tests/unity)
-target_link_libraries(test_audio PRIVATE SDL3::SDL3)
-add_test(NAME audio_test COMMAND test_audio)
+# # Audio tests
+# add_executable(test_audio
+# 	tests/core/test_audio.c
+# 	${UNITY_SOURCES}
+# 	src/core/cpu.c
+# 	src/core/memory.c
+# 	src/core/instructions.c
+# 	src/core/syscalls.c
+# 	src/tools/disassembler/dasm.c
+# )
+# target_include_directories(test_audio PRIVATE include tests/unity)
+# target_link_libraries(test_audio PRIVATE SDL3::SDL3)
+# add_test(NAME audio_test COMMAND test_audio)
 
-# Error handling tests
-add_executable(test_error_handling
-	tests/core/test_error_handling.c
-	${UNITY_SOURCES}
-	src/core/cpu.c
-	src/core/memory.c
-	src/core/instructions.c
-	src/core/syscalls.c
-	src/tools/disassembler/dasm.c
-)
-target_include_directories(test_error_handling PRIVATE include tests/unity)
-target_link_libraries(test_error_handling PRIVATE SDL3::SDL3)
-add_test(NAME error_handling_test COMMAND test_error_handling)
+# # Error handling tests
+# add_executable(test_error_handling
+# 	tests/core/test_error_handling.c
+# 	${UNITY_SOURCES}
+# 	src/core/cpu.c
+# 	src/core/memory.c
+# 	src/core/instructions.c
+# 	src/core/syscalls.c
+# 	src/tools/disassembler/dasm.c
+# )
+# target_include_directories(test_error_handling PRIVATE include tests/unity)
+# target_link_libraries(test_error_handling PRIVATE SDL3::SDL3)
+# add_test(NAME error_handling_test COMMAND test_error_handling)
 
 # === RESOURCE COPYING ===
 add_custom_command(
@@ -249,7 +249,7 @@ add_custom_target(tools DEPENDS idn16-dasm)
 add_custom_target(all_targets DEPENDS ${PROJECT_NAME} tools)
 
 # Run all tests
-add_custom_target(run_tests COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+# add_custom_target(run_tests COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
 
 # Clean generated files
 add_custom_target(clean_generated

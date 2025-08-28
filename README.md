@@ -73,11 +73,15 @@ You will need the following software installed:
 - `GCC` or `Clang` (C compiler)
 - `CMake` (version 3.10 or higher)
 - `Git` (to clone the repository)
+- `Flex` (Part of assembler toolchain)
+- `Bison` (Part of assembler toolchain)
 
 For Ubuntu/Debian, these can be installed by running the following:
 ```bash
 sudo apt update 
 sudo apt install build-essential cmake git
+sudo apt-get install flex
+sudo apt-get install bison
 ```
 
 **Note:** SDL3 and other dependencies are automatically downloaded and built by CMake using FetchContent.
