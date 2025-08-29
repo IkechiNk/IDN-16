@@ -256,3 +256,5 @@ add_custom_target(clean_generated
 	COMMAND ${CMAKE_COMMAND} -E remove -f ${LEXER_OUTPUT} ${PARSER_OUTPUT} ${PARSER_HEADER}
 	COMMENT "Cleaning generated parser/lexer files"
 )
+
+add_compile_options(-O3)

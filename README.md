@@ -75,13 +75,15 @@ You will need the following software installed:
 - `Git` (to clone the repository)
 - `Flex` (Part of assembler toolchain)
 - `Bison` (Part of assembler toolchain)
+- `Zenity` (For the file dialog GUI)
 
 For Ubuntu/Debian, these can be installed by running the following:
 ```bash
 sudo apt update 
 sudo apt install build-essential cmake git
-sudo apt-get install flex
-sudo apt-get install bison
+sudo apt install flex
+sudo apt install bison
+sudo apt install zenity
 ```
 
 **Note:** SDL3 and other dependencies are automatically downloaded and built by CMake using FetchContent.
